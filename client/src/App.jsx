@@ -149,7 +149,7 @@ function PlayerBike({ gameState, setGameState, obstacles, setScore, setSpeedKmh,
 
   useFrame((state, delta) => {
     if (!bikeRef.current || gameState !== 'PLAYING') {
-      if (gameState === 'PAUSED' || gameState === 'COUNTDOWN') engineAudio.updatePitch(0);
+      if (gameState === 'PAUSED' || gameState === 'COUNTDOWN' || gameState === 'MENU') engineAudio.updatePitch(0);
       return;
     }
 
@@ -228,7 +228,7 @@ function PlayerBike({ gameState, setGameState, obstacles, setScore, setSpeedKmh,
 }
 
 export default function App() {
-  const [gameState, setGameState] = useState('COUNTDOWN');
+  const [gameState, setGameState] = useState('MENU'); // Changed initial state
   const [countdownSequence, setCountdownSequence] = useState('3');
   const [score, setScore] = useState(5000);
   const [speedKmh, setSpeedKmh] = useState(0);
@@ -251,7 +251,6 @@ export default function App() {
         if (step < sequence.length) setCountdownSequence(sequence[step]);
         else {
           setGameState('PLAYING');
-          engineAudio.init();
           setTimeout(() => setShowGhost(false), 4000);
           clearInterval(timer);
         }
@@ -310,33 +309,50 @@ export default function App() {
         {/* Collision Flash Overlay */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'red', opacity: isFlashing ? 0.4 : 0, pointerEvents: 'none', zIndex: 5, transition: 'opacity 0.1s' }} />
 
-        {/* Top HUD */}
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%)', zIndex: 10, boxSizing: 'border-box' }}>
-          <div>
-            <span style={{ fontSize: '12px', color: '#ccc', textTransform: 'uppercase' }}>Score</span>
-            <div style={{ margin: 0, color: '#f7b500', fontSize: '28px', fontWeight: 'bold' }}>{score}</div>
-            <div style={{ fontSize: '11px', color: '#fff', backgroundColor: '#e31c25', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>{getNextTierMessage(score)}</div>
+        {/* Start Menu Layer - Unlocks Audio */}
+        {gameState === 'MENU' && (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 50, background: 'rgba(0,0,0,0.85)' }}>
+            <h1 style={{ color: '#e31c25', fontStyle: 'italic', fontSize: '48px', margin: '0 0 10px 0', textShadow: '2px 2px 5px #000' }}>BAJAJ RACING</h1>
+            <p style={{ color: '#ccc', marginBottom: '30px' }}>Dashain Challenge</p>
+            <button
+              onClick={() => {
+                engineAudio.init(); // User interaction unlocks audio
+                setGameState('COUNTDOWN');
+              }}
+              style={{ padding: '16px 40px', fontSize: '24px', fontWeight: 'bold', background: '#f7b500', color: '#000', border: 'none', borderRadius: '8px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(247,181,0,0.4)' }}
+            >
+              START RACE
+            </button>
+          </div>
+        )}
+
+        {/* Top HUD (Adjusted Spacing for Portrait) */}
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', padding: '12px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%)', zIndex: 10, boxSizing: 'border-box' }}>
+          <div style={{ flexShrink: 0 }}>
+            <span style={{ fontSize: '11px', color: '#ccc', textTransform: 'uppercase' }}>Score</span>
+            <div style={{ margin: 0, color: '#f7b500', fontSize: '22px', fontWeight: 'bold' }}>{score}</div>
+            <div style={{ fontSize: '10px', color: '#fff', backgroundColor: '#e31c25', padding: '2px 4px', borderRadius: '4px', marginTop: '4px', display: 'inline-block', maxWidth: '90px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getNextTierMessage(score)}</div>
           </div>
 
-          <div style={{ flex: 1, margin: '0 30px', textAlign: 'center' }}>
-            <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '3px', position: 'relative', marginTop: '10px' }}>
-              <div style={{ position: 'absolute', top: '-10px', left: `${progress}%`, transition: 'left 0.1s linear', fontSize: '18px' }}>🏍️</div>
-              <div style={{ position: 'absolute', top: '-8px', right: '-15px', fontSize: '16px' }}>🏁</div>
+          <div style={{ flex: 1, margin: '0 10px', textAlign: 'center', minWidth: '40px' }}>
+            <div style={{ width: '100%', height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '2px', position: 'relative', marginTop: '14px' }}>
+              <div style={{ position: 'absolute', top: '-10px', left: `${progress}%`, transition: 'left 0.1s linear', fontSize: '14px' }}>🏍️</div>
+              <div style={{ position: 'absolute', top: '-8px', right: '-12px', fontSize: '12px' }}>🏁</div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-            <div style={{ textAlign: 'center', background: 'rgba(0,0,0,0.6)', padding: '6px 12px', borderRadius: '8px', border: '1px solid #444' }}>
-              <span style={{ fontSize: '24px', fontWeight: '900', color: speedKmh > 80 ? '#e31c25' : '#ffffff' }}>{speedKmh}</span>
-              <span style={{ fontSize: '11px', color: '#bbb', marginLeft: '2px' }}>KM/H</span>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+            <div style={{ textAlign: 'center', background: 'rgba(0,0,0,0.6)', padding: '6px 8px', borderRadius: '8px', border: '1px solid #444' }}>
+              <span style={{ fontSize: '20px', fontWeight: '900', color: speedKmh > 80 ? '#e31c25' : '#ffffff' }}>{speedKmh}</span>
+              <span style={{ fontSize: '9px', color: '#bbb', marginLeft: '2px' }}>KM/H</span>
             </div>
-            <button onContextMenu={(e) => e.preventDefault()} onClick={() => setGameState(gameState === 'PLAYING' ? 'PAUSED' : 'PLAYING')} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>
+            <button onContextMenu={(e) => e.preventDefault()} onClick={() => setGameState(gameState === 'PLAYING' ? 'PAUSED' : 'PLAYING')} style={{ background: 'none', border: 'none', color: 'white', fontSize: '20px', cursor: 'pointer', padding: 0 }}>
               {gameState === 'PAUSED' ? '▶️' : '⏸️'}
             </button>
           </div>
         </div>
 
-        {/* 3D Canvas (FOV increased for better portrait viewing) */}
+        {/* 3D Canvas */}
         <Canvas camera={{ fov: 65 }}>
           <ambientLight intensity={0.8} />
           <directionalLight position={[20, 35, 10]} intensity={1.4} />
@@ -361,7 +377,7 @@ export default function App() {
             <h1 style={{ color: 'white', fontSize: '48px', margin: '0 0 20px 0', letterSpacing: '2px' }}>PAUSED</h1>
             <button
               onContextMenu={(e) => e.preventDefault()}
-              onClick={() => { setGameState('PLAYING'); engineAudio.init(); }}
+              onClick={() => { setGameState('PLAYING'); engineAudio.ctx.resume(); }}
               style={{ padding: '15px 40px', fontSize: '24px', cursor: 'pointer', borderRadius: '8px', background: '#34c759', color: 'white', border: 'none', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}
             >
               ▶ RESUME
@@ -370,9 +386,9 @@ export default function App() {
         )}
 
         {/* Mobile Controls Layer */}
-        {gameState !== 'FINISHED' && (
+        {(gameState === 'PLAYING' || gameState === 'COUNTDOWN') && (
           <div style={{ position: 'absolute', bottom: '24px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 20px', pointerEvents: 'none', zIndex: 15 }}>
-            {/* Steering (Left Side) */}
+            {/* Steering */}
             <div style={{ display: 'flex', gap: '10px', pointerEvents: 'auto' }}>
               <div
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -388,7 +404,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Pedals (Right Side) */}
+            {/* Pedals */}
             <div style={{ display: 'flex', gap: '10px', pointerEvents: 'auto' }}>
               <div
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -406,7 +422,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Finished / Rewards Screen */}
+        {/* Finished Screen */}
         {gameState === 'FINISHED' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.9)', color: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 20 }}>
             <h1 style={{ fontSize: '42px', margin: '0 0 10px 0', color: '#e31c25', fontStyle: 'italic', fontWeight: '900' }}>FINISH LINE!</h1>
