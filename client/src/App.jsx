@@ -1,24 +1,10 @@
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Sky, useGLTF, OrbitControls } from '@react-three/drei';
+import { Sky, useGLTF } from '@react-three/drei';
 import { useRef, useMemo, useState, useEffect } from 'react';
 import * as THREE from 'three';
 
 const inputState = { left: false, right: false, gas: false, brake: false };
 const FINISH_LINE_Z = -1200;
-
-// CSS for Landscape Lock and Onboarding Animations
-const globalStyles = `
-  @media screen and (orientation: portrait) {
-    #landscape-lock { display: flex !important; }
-    #game-container { display: none !important; }
-  }
-  @keyframes pulse {
-    0% { transform: scale(1); opacity: 0.8; }
-    50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 15px rgba(255,255,255,0.5); }
-    100% { transform: scale(1); opacity: 0.8; }
-  }
-  .ghost-pulse { animation: pulse 1.5s infinite; }
-`;
 
 class EngineAudio {
   constructor() {
@@ -93,14 +79,11 @@ function LingePing({ position, rotation = [0, 0, 0] }) {
 
 function Track() {
   const trackRef = useRef();
-
   useFrame((state) => {
-    // Keep the track centered exactly where the camera is looking
     if (trackRef.current) {
       trackRef.current.position.z = state.camera.position.z - 100;
     }
   });
-
   return (
     <mesh ref={trackRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
       <planeGeometry args={[20, 500]} />
@@ -245,7 +228,7 @@ function PlayerBike({ gameState, setGameState, obstacles, setScore, setSpeedKmh,
 }
 
 export default function App() {
-  const [gameState, setGameState] = useState('COUNTDOWN'); 
+  const [gameState, setGameState] = useState('COUNTDOWN');
   const [countdownSequence, setCountdownSequence] = useState('3');
   const [score, setScore] = useState(5000);
   const [speedKmh, setSpeedKmh] = useState(0);
@@ -291,13 +274,11 @@ export default function App() {
       if (e.key === 'ArrowUp' || e.key === 'w') inputState.gas = false;
       if (e.key === 'ArrowDown' || e.key === 's' || e.key === ' ') inputState.brake = false;
     };
-    
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
-    
-    return () => { 
-      window.removeEventListener('keydown', down); 
-      window.removeEventListener('keyup', up); 
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
     };
   }, [gameState]);
 
@@ -324,17 +305,12 @@ export default function App() {
 
   return (
     <>
-      <style>{globalStyles}</style>
-      
-      <div id="landscape-lock" style={{ display: 'none', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#111', color: 'white', zIndex: 9999, justifyContent: 'center', alignItems: 'center', flexDirection: 'column', textAlign: 'center', padding: '20px', boxSizing: 'border-box' }}>
-        <h1 style={{ color: '#e31c25' }}>Rotate Your Device</h1>
-        <p>Please switch to landscape mode for the best racing experience.</p>
-      </div>
-
       <div id="game-container" style={{ width: '100vw', height: '100vh', margin: 0, padding: 0, overflow: 'hidden', position: 'relative', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         
+        {/* Collision Flash Overlay */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'red', opacity: isFlashing ? 0.4 : 0, pointerEvents: 'none', zIndex: 5, transition: 'opacity 0.1s' }} />
 
+        {/* Top HUD */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%)', zIndex: 10, boxSizing: 'border-box' }}>
           <div>
             <span style={{ fontSize: '12px', color: '#ccc', textTransform: 'uppercase' }}>Score</span>
@@ -354,13 +330,14 @@ export default function App() {
               <span style={{ fontSize: '24px', fontWeight: '900', color: speedKmh > 80 ? '#e31c25' : '#ffffff' }}>{speedKmh}</span>
               <span style={{ fontSize: '11px', color: '#bbb', marginLeft: '2px' }}>KM/H</span>
             </div>
-            <button onClick={() => setGameState(gameState === 'PLAYING' ? 'PAUSED' : 'PLAYING')} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>
+            <button onContextMenu={(e) => e.preventDefault()} onClick={() => setGameState(gameState === 'PLAYING' ? 'PAUSED' : 'PLAYING')} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>
               {gameState === 'PAUSED' ? '▶️' : '⏸️'}
             </button>
           </div>
         </div>
 
-        <Canvas>
+        {/* 3D Canvas (FOV increased for better portrait viewing) */}
+        <Canvas camera={{ fov: 65 }}>
           <ambientLight intensity={0.8} />
           <directionalLight position={[20, 35, 10]} intensity={1.4} />
           <Sky sunPosition={[120, 15, -120]} turbidity={0.08} rayleigh={0.4} />
@@ -371,61 +348,65 @@ export default function App() {
           <PlayerBike gameState={gameState} setGameState={setGameState} obstacles={obstacles} setScore={setScore} setSpeedKmh={setSpeedKmh} setProgress={setProgress} triggerFlash={triggerFlash} />
         </Canvas>
 
+        {/* Countdown */}
         {gameState === 'COUNTDOWN' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 12 }}>
             <h1 style={{ fontSize: '120px', color: '#f7b500', textShadow: '4px 4px 10px rgba(0,0,0,0.8)', margin: 0, fontStyle: 'italic' }}>{countdownSequence}</h1>
           </div>
         )}
 
-       {gameState === 'PAUSED' && (
-  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 30 }}>
-    <h1 style={{ color: 'white', fontSize: '48px', margin: '0 0 20px 0', letterSpacing: '2px' }}>PAUSED</h1>
-    <button
-      onClick={() => {
-        setGameState('PLAYING');
-        engineAudio.init(); 
-      }}
-      style={{ padding: '15px 40px', fontSize: '24px', cursor: 'pointer', borderRadius: '8px', background: '#34c759', color: 'white', border: 'none', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}
-    >
-      ▶ RESUME
-    </button>
-  </div>
-)}
+        {/* Pause Menu */}
+        {gameState === 'PAUSED' && (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 30 }}>
+            <h1 style={{ color: 'white', fontSize: '48px', margin: '0 0 20px 0', letterSpacing: '2px' }}>PAUSED</h1>
+            <button
+              onContextMenu={(e) => e.preventDefault()}
+              onClick={() => { setGameState('PLAYING'); engineAudio.init(); }}
+              style={{ padding: '15px 40px', fontSize: '24px', cursor: 'pointer', borderRadius: '8px', background: '#34c759', color: 'white', border: 'none', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}
+            >
+              ▶ RESUME
+            </button>
+          </div>
+        )}
 
+        {/* Mobile Controls Layer */}
         {gameState !== 'FINISHED' && (
-          <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '120px', display: 'flex', justifyContent: 'space-between', padding: '0 10px', boxSizing: 'border-box', zIndex: 15 }}>
-            <div style={{ display: 'flex', width: '40%' }}>
+          <div style={{ position: 'absolute', bottom: '24px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 20px', pointerEvents: 'none', zIndex: 15 }}>
+            {/* Steering (Left Side) */}
+            <div style={{ display: 'flex', gap: '10px', pointerEvents: 'auto' }}>
               <div
-                style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onPointerDown={() => { hapticTap(); inputState.left = true; }} onPointerUp={() => (inputState.left = false)} onPointerLeave={() => (inputState.left = false)}
               >
-                <button className={showGhost ? 'ghost-pulse' : ''} style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.7)', border: 'none', fontSize: '20px', pointerEvents: 'none' }}>◀</button>
+                <button onContextMenu={(e) => e.preventDefault()} className={showGhost ? 'ghost-pulse control-btn' : 'control-btn'} style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.7)', border: 'none', fontSize: '20px', pointerEvents: 'none' }}>◀</button>
               </div>
               <div
-                style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onPointerDown={() => { hapticTap(); inputState.right = true; }} onPointerUp={() => (inputState.right = false)} onPointerLeave={() => (inputState.right = false)}
               >
-                <button className={showGhost ? 'ghost-pulse' : ''} style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.7)', border: 'none', fontSize: '20px', pointerEvents: 'none' }}>▶</button>
+                <button onContextMenu={(e) => e.preventDefault()} className={showGhost ? 'ghost-pulse control-btn' : 'control-btn'} style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.7)', border: 'none', fontSize: '20px', pointerEvents: 'none' }}>▶</button>
               </div>
             </div>
 
-            <div style={{ display: 'flex', width: '40%' }}>
+            {/* Pedals (Right Side) */}
+            <div style={{ display: 'flex', gap: '10px', pointerEvents: 'auto' }}>
               <div
-                style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onPointerDown={() => { hapticTap(); inputState.brake = true; }} onPointerUp={() => (inputState.brake = false)} onPointerLeave={() => (inputState.brake = false)}
               >
-                <button style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,59,48,0.8)', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '12px', pointerEvents: 'none' }}>BRK</button>
+                <button onContextMenu={(e) => e.preventDefault()} className="control-btn" style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,59,48,0.8)', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '12px', pointerEvents: 'none' }}>BRK</button>
               </div>
               <div
-                style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onPointerDown={() => { hapticTap(); inputState.gas = true; }} onPointerUp={() => (inputState.gas = false)} onPointerLeave={() => (inputState.gas = false)}
               >
-                <button className={showGhost ? 'ghost-pulse' : ''} style={{ width: '75px', height: '75px', borderRadius: '50%', background: 'rgba(52,199,89,0.9)', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '14px', pointerEvents: 'none' }}>GAS</button>
+                <button onContextMenu={(e) => e.preventDefault()} className={showGhost ? 'ghost-pulse control-btn' : 'control-btn'} style={{ width: '75px', height: '75px', borderRadius: '50%', background: 'rgba(52,199,89,0.9)', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '14px', pointerEvents: 'none' }}>GAS</button>
               </div>
             </div>
           </div>
         )}
 
+        {/* Finished / Rewards Screen */}
         {gameState === 'FINISHED' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.9)', color: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 20 }}>
             <h1 style={{ fontSize: '42px', margin: '0 0 10px 0', color: '#e31c25', fontStyle: 'italic', fontWeight: '900' }}>FINISH LINE!</h1>
@@ -438,32 +419,33 @@ export default function App() {
             </div>
             
             {!voucherCode ? (
-  <button 
-    onClick={async () => {
-      try {
-        const res = await fetch('https://bajaj-racing-game.onrender.com//api/races', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ score, speedKmh })
-        });
-        const data = await res.json();
-        setVoucherCode(data.voucherCode);
-      } catch (err) {
-        console.error("Failed to claim voucher", err);
-      }
-    }}
-    style={{ padding: '16px 40px', fontSize: '20px', cursor: 'pointer', borderRadius: '8px', background: '#e31c25', color: 'white', border: 'none', fontWeight: 'bold', marginBottom: '15px', boxShadow: '0 4px 15px rgba(227,28,37,0.4)' }}
-  >
-    Claim Voucher
-  </button>
-) : (
-  <div style={{ backgroundColor: '#fff', color: '#000', padding: '15px 30px', borderRadius: '8px', marginBottom: '15px', textAlign: 'center' }}>
-    <p style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: 'bold' }}>Your Code:</p>
-    <h2 style={{ margin: 0, color: '#e31c25', letterSpacing: '2px' }}>{voucherCode}</h2>
-    <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Take a screenshot!</p>
-  </div>
-)}
-            <button onClick={() => window.location.reload()} style={{ background: 'none', border: 'none', color: '#888', textDecoration: 'underline', fontSize: '16px', cursor: 'pointer' }}>
+              <button
+                onContextMenu={(e) => e.preventDefault()}
+                onClick={async () => {
+                  try {
+                    const res = await fetch('https://bajaj-racing-game.onrender.com//api/races', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ score, speedKmh })
+                    });
+                    const data = await res.json();
+                    setVoucherCode(data.voucherCode);
+                  } catch (err) {
+                    console.error("Failed to claim voucher", err);
+                  }
+                }}
+                style={{ padding: '16px 40px', fontSize: '20px', cursor: 'pointer', borderRadius: '8px', background: '#e31c25', color: 'white', border: 'none', fontWeight: 'bold', marginBottom: '15px', boxShadow: '0 4px 15px rgba(227,28,37,0.4)' }}
+              >
+                Claim Voucher
+              </button>
+            ) : (
+              <div style={{ backgroundColor: '#fff', color: '#000', padding: '15px 30px', borderRadius: '8px', marginBottom: '15px', textAlign: 'center' }}>
+                <p style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: 'bold' }}>Your Code:</p>
+                <h2 style={{ margin: 0, color: '#e31c25', letterSpacing: '2px' }}>{voucherCode}</h2>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Take a screenshot!</p>
+              </div>
+            )}
+            <button onContextMenu={(e) => e.preventDefault()} onClick={() => window.location.reload()} style={{ background: 'none', border: 'none', color: '#888', textDecoration: 'underline', fontSize: '16px', cursor: 'pointer' }}>
               Race Again
             </button>
           </div>
