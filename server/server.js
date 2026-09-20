@@ -46,27 +46,31 @@ app.post('/api/races', async (req, res) => {
   const { score, speedKmh } = req.body;
   
   try {
-    // Simple server-side validation
     if (score === undefined || score < 0) {
       return res.status(400).json({ error: 'Invalid score' });
     }
 
-    // Determine reward tier based on project plan rules
+    // 1. Insert into race_results (user_id and bike_id are left null for MVP)
+    await pool.query(
+      'INSERT INTO race_results (score) VALUES ($1) RETURNING id',
+      [score]
+    );
+
+    // 2. Determine reward tier
     let rewardTier = 'Participation Badge';
     if (score >= 10000) rewardTier = 'Premium Merchandise';
     else if (score >= 7000) rewardTier = '20% Service Voucher';
     else if (score >= 4000) rewardTier = 'Bajaj Keyring';
 
-    // Generate a random voucher code (e.g., BDX-A7K9)
+    // 3. Generate voucher code and insert into reward_claims
     const voucherCode = `BDX-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    
+    await pool.query(
+      "INSERT INTO reward_claims (voucher_code, status) VALUES ($1, 'ISSUED')",
+      [voucherCode]
+    );
 
-    // Insert into database (assuming you have a race_results table)
-    // const result = await pool.query(
-    //   'INSERT INTO race_results (score, top_speed, reward_tier, voucher_code) VALUES ($1, $2, $3, $4) RETURNING *',
-    //   [score, speedKmh, rewardTier, voucherCode]
-    // );
-
-    // For now, return the generated data directly to the client
+    // 4. Return data to frontend
     res.json({
       success: true,
       score: score,
