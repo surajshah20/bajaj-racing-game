@@ -182,3 +182,24 @@
     border-right-color: var(--border);
   }
 }
+
+
+.portrait-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #222;
+  color: white;
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: sans-serif;
+}
+
+/* Show the overlay only if the screen is taller than it is wide */
+@media screen and (orientation: portrait) {
+  .portrait-overlay {
+    display: flex;
+  }
+}

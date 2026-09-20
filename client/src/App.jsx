@@ -94,16 +94,16 @@ function LingePing({ position, rotation = [0, 0, 0] }) {
 function Track() {
   const trackRef = useRef();
 
-  useFrame((state, delta) => {
-    trackRef.current.position.z += 15 * delta;
-    if (trackRef.current.position.z > 50) {
-      trackRef.current.position.z = 0;
+  useFrame((state) => {
+    // Keep the track centered exactly where the camera is looking
+    if (trackRef.current) {
+      trackRef.current.position.z = state.camera.position.z - 100;
     }
   });
 
   return (
     <mesh ref={trackRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-      <planeGeometry args={[10, 200]} />
+      <planeGeometry args={[20, 500]} />
       <meshStandardMaterial color="#333333" />
     </mesh>
   );

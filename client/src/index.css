@@ -1,3 +1,16 @@
+body {
+  /* Prevent text highlighting and copying */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  
+  /* Disable the mobile long-press popup menu */
+  -webkit-touch-callout: none;
+  
+  /* Prevent tap highlight color on mobile browsers */
+  -webkit-tap-highlight-color: transparent;
+}
+
 html, body, #root {
   margin: 0;
   padding: 0;
