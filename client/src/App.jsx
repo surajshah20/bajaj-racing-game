@@ -1,5 +1,5 @@
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Sky, useGLTF } from '@react-three/drei';
+import { Sky, useGLTF, OrbitControls } from '@react-three/drei';
 import { useRef, useMemo, useState, useEffect } from 'react';
 import * as THREE from 'three';
 
@@ -92,23 +92,20 @@ function LingePing({ position, rotation = [0, 0, 0] }) {
 }
 
 function Track() {
+  const trackRef = useRef();
+
+  useFrame((state, delta) => {
+    trackRef.current.position.z += 15 * delta;
+    if (trackRef.current.position.z > 50) {
+      trackRef.current.position.z = 0;
+    }
+  });
+
   return (
-    <group position={[0, 0, -600]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.55, 0]}><planeGeometry args={[450, 1300]} /><meshStandardMaterial color="#2d5024" roughness={0.9} /></mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}><planeGeometry args={[14, 1300]} /><meshStandardMaterial color="#1a1a1a" roughness={0.7} /></mesh>
-      {Array.from({ length: 120 }).map((_, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.48, 600 - i * 10]}><planeGeometry args={[0.3, 4]} /><meshBasicMaterial color="#eeeeee" /></mesh>
-      ))}
-      {Array.from({ length: 130 }).map((_, i) => {
-        const color = i % 2 === 0 ? '#f7b500' : '#111111';
-        return (
-          <group key={i} position={[0, -0.35, 600 - i * 10]}>
-            <mesh position={[-7.2, 0, 0]}><boxGeometry args={[0.4, 0.3, 10]} /><meshStandardMaterial color={color} /></mesh>
-            <mesh position={[7.2, 0, 0]}><boxGeometry args={[0.4, 0.3, 10]} /><meshStandardMaterial color={color} /></mesh>
-          </group>
-        );
-      })}
-    </group>
+    <mesh ref={trackRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
+      <planeGeometry args={[10, 200]} />
+      <meshStandardMaterial color="#333333" />
+    </mesh>
   );
 }
 
@@ -191,7 +188,6 @@ function PlayerBike({ gameState, setGameState, obstacles, setScore, setSpeedKmh,
     setSpeedKmh(Math.round(velocity.current * 2.2));
     engineAudio.updatePitch(velocity.current / maxSpeed);
 
-    // Update Progress Bar
     const progressPercent = Math.min(100, Math.max(0, (bikeRef.current.position.z / FINISH_LINE_Z) * 100));
     setProgress(progressPercent);
 
@@ -249,13 +245,14 @@ function PlayerBike({ gameState, setGameState, obstacles, setScore, setSpeedKmh,
 }
 
 export default function App() {
-  const [gameState, setGameState] = useState('COUNTDOWN'); // COUNTDOWN, PLAYING, PAUSED, FINISHED
+  const [gameState, setGameState] = useState('COUNTDOWN'); 
   const [countdownSequence, setCountdownSequence] = useState('3');
   const [score, setScore] = useState(5000);
   const [speedKmh, setSpeedKmh] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isFlashing, setIsFlashing] = useState(false);
   const [showGhost, setShowGhost] = useState(true);
+  const [voucherCode, setVoucherCode] = useState(null);
 
   const obstacles = useMemo(() => Array.from({ length: 65 }).map(() => ({
     x: (Math.random() - 0.5) * 11, z: -(Math.random() * 1100) - 40
@@ -272,7 +269,7 @@ export default function App() {
         else {
           setGameState('PLAYING');
           engineAudio.init();
-          setTimeout(() => setShowGhost(false), 4000); // Hide ghost controls after 4s
+          setTimeout(() => setShowGhost(false), 4000);
           clearInterval(timer);
         }
       }, 1000);
@@ -283,20 +280,25 @@ export default function App() {
   useEffect(() => {
     const down = (e) => {
       if (gameState !== 'PLAYING') return;
-      if (e.key === 'ArrowLeft' || e.key === 'a') inputState.left = true;
-      if (e.key === 'ArrowRight' || e.key === 'd') inputState.right = true;
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === '1') inputState.left = true;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === '3') inputState.right = true;
       if (e.key === 'ArrowUp' || e.key === 'w') inputState.gas = true;
-      if (e.key === 'ArrowDown' || e.key === 's') inputState.brake = true;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === ' ') inputState.brake = true;
     };
     const up = (e) => {
-      if (e.key === 'ArrowLeft' || e.key === 'a') inputState.left = false;
-      if (e.key === 'ArrowRight' || e.key === 'd') inputState.right = false;
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === '1') inputState.left = false;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === '3') inputState.right = false;
       if (e.key === 'ArrowUp' || e.key === 'w') inputState.gas = false;
-      if (e.key === 'ArrowDown' || e.key === 's') inputState.brake = false;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === ' ') inputState.brake = false;
     };
+    
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+    
+    return () => { 
+      window.removeEventListener('keydown', down); 
+      window.removeEventListener('keyup', up); 
+    };
   }, [gameState]);
 
   const triggerFlash = () => {
@@ -324,7 +326,6 @@ export default function App() {
     <>
       <style>{globalStyles}</style>
       
-      {/* Landscape Lock Overlay */}
       <div id="landscape-lock" style={{ display: 'none', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#111', color: 'white', zIndex: 9999, justifyContent: 'center', alignItems: 'center', flexDirection: 'column', textAlign: 'center', padding: '20px', boxSizing: 'border-box' }}>
         <h1 style={{ color: '#e31c25' }}>Rotate Your Device</h1>
         <p>Please switch to landscape mode for the best racing experience.</p>
@@ -332,10 +333,8 @@ export default function App() {
 
       <div id="game-container" style={{ width: '100vw', height: '100vh', margin: 0, padding: 0, overflow: 'hidden', position: 'relative', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         
-        {/* Collision Flash Overlay */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'red', opacity: isFlashing ? 0.4 : 0, pointerEvents: 'none', zIndex: 5, transition: 'opacity 0.1s' }} />
 
-        {/* HUD & Progress Bar */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%)', zIndex: 10, boxSizing: 'border-box' }}>
           <div>
             <span style={{ fontSize: '12px', color: '#ccc', textTransform: 'uppercase' }}>Score</span>
@@ -344,7 +343,6 @@ export default function App() {
           </div>
 
           <div style={{ flex: 1, margin: '0 30px', textAlign: 'center' }}>
-            {/* Progress Bar */}
             <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '3px', position: 'relative', marginTop: '10px' }}>
               <div style={{ position: 'absolute', top: '-10px', left: `${progress}%`, transition: 'left 0.1s linear', fontSize: '18px' }}>🏍️</div>
               <div style={{ position: 'absolute', top: '-8px', right: '-15px', fontSize: '16px' }}>🏁</div>
@@ -373,7 +371,6 @@ export default function App() {
           <PlayerBike gameState={gameState} setGameState={setGameState} obstacles={obstacles} setScore={setScore} setSpeedKmh={setSpeedKmh} setProgress={setProgress} triggerFlash={triggerFlash} />
         </Canvas>
 
-        {/* Countdown / Pause Overlays */}
         {gameState === 'COUNTDOWN' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 12 }}>
             <h1 style={{ fontSize: '120px', color: '#f7b500', textShadow: '4px 4px 10px rgba(0,0,0,0.8)', margin: 0, fontStyle: 'italic' }}>{countdownSequence}</h1>
@@ -383,11 +380,11 @@ export default function App() {
        {gameState === 'PAUSED' && (
   <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 30 }}>
     <h1 style={{ color: 'white', fontSize: '48px', margin: '0 0 20px 0', letterSpacing: '2px' }}>PAUSED</h1>
-    <button 
+    <button
       onClick={() => {
         setGameState('PLAYING');
-        engineAudio.init(); // Restart engine sound
-      }} 
+        engineAudio.init(); 
+      }}
       style={{ padding: '15px 40px', fontSize: '24px', cursor: 'pointer', borderRadius: '8px', background: '#34c759', color: 'white', border: 'none', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}
     >
       ▶ RESUME
@@ -395,17 +392,16 @@ export default function App() {
   </div>
 )}
 
-        {/* Touch UI with Expanded Hitboxes & Ghost Animations */}
         {gameState !== 'FINISHED' && (
           <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '120px', display: 'flex', justifyContent: 'space-between', padding: '0 10px', boxSizing: 'border-box', zIndex: 15 }}>
             <div style={{ display: 'flex', width: '40%' }}>
-              <div 
+              <div
                 style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onPointerDown={() => { hapticTap(); inputState.left = true; }} onPointerUp={() => (inputState.left = false)} onPointerLeave={() => (inputState.left = false)}
               >
                 <button className={showGhost ? 'ghost-pulse' : ''} style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.7)', border: 'none', fontSize: '20px', pointerEvents: 'none' }}>◀</button>
               </div>
-              <div 
+              <div
                 style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onPointerDown={() => { hapticTap(); inputState.right = true; }} onPointerUp={() => (inputState.right = false)} onPointerLeave={() => (inputState.right = false)}
               >
@@ -414,13 +410,13 @@ export default function App() {
             </div>
 
             <div style={{ display: 'flex', width: '40%' }}>
-              <div 
+              <div
                 style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onPointerDown={() => { hapticTap(); inputState.brake = true; }} onPointerUp={() => (inputState.brake = false)} onPointerLeave={() => (inputState.brake = false)}
               >
                 <button style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,59,48,0.8)', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '12px', pointerEvents: 'none' }}>BRK</button>
               </div>
-              <div 
+              <div
                 style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onPointerDown={() => { hapticTap(); inputState.gas = true; }} onPointerUp={() => (inputState.gas = false)} onPointerLeave={() => (inputState.gas = false)}
               >
@@ -430,7 +426,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Actionable Post-Race Screen */}
         {gameState === 'FINISHED' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.9)', color: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 20 }}>
             <h1 style={{ fontSize: '42px', margin: '0 0 10px 0', color: '#e31c25', fontStyle: 'italic', fontWeight: '900' }}>FINISH LINE!</h1>
@@ -442,9 +437,32 @@ export default function App() {
               <h3 style={{ margin: 0, color: '#fff', fontSize: '22px' }}>{getRewardTier(score)}</h3>
             </div>
             
-            <button style={{ padding: '16px 40px', fontSize: '20px', cursor: 'pointer', borderRadius: '8px', background: '#e31c25', color: 'white', border: 'none', fontWeight: 'bold', marginBottom: '15px', boxShadow: '0 4px 15px rgba(227,28,37,0.4)' }}>
-              Claim Voucher
-            </button>
+            {!voucherCode ? (
+  <button 
+    onClick={async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/races', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ score, speedKmh })
+        });
+        const data = await res.json();
+        setVoucherCode(data.voucherCode);
+      } catch (err) {
+        console.error("Failed to claim voucher", err);
+      }
+    }}
+    style={{ padding: '16px 40px', fontSize: '20px', cursor: 'pointer', borderRadius: '8px', background: '#e31c25', color: 'white', border: 'none', fontWeight: 'bold', marginBottom: '15px', boxShadow: '0 4px 15px rgba(227,28,37,0.4)' }}
+  >
+    Claim Voucher
+  </button>
+) : (
+  <div style={{ backgroundColor: '#fff', color: '#000', padding: '15px 30px', borderRadius: '8px', marginBottom: '15px', textAlign: 'center' }}>
+    <p style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: 'bold' }}>Your Code:</p>
+    <h2 style={{ margin: 0, color: '#e31c25', letterSpacing: '2px' }}>{voucherCode}</h2>
+    <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Take a screenshot!</p>
+  </div>
+)}
             <button onClick={() => window.location.reload()} style={{ background: 'none', border: 'none', color: '#888', textDecoration: 'underline', fontSize: '16px', cursor: 'pointer' }}>
               Race Again
             </button>
