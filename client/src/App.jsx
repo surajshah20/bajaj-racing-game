@@ -441,7 +441,7 @@ export default function App() {
   <button 
     onClick={async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/races', {
+        const res = await fetch('https://bajaj-racing-game.onrender.com//api/races', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ score, speedKmh })
