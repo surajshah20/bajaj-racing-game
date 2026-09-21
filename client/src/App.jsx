@@ -1,234 +1,15 @@
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Sky, useGLTF } from '@react-three/drei';
-import { useRef, useMemo, useState, useEffect } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { Sky } from '@react-three/drei';
+import { useMemo, useState, useEffect } from 'react';
+import { inputState, engineAudio } from './utils/store';
+import PlayerBike from './components/game/PlayerBike';
+import NitroPads from './components/game/NitroPads';
+import { EnvironmentDecorations, Track, FinishLine, Obstacles } from './components/game/Environment';
+import { trackCurve } from './utils/trackPath';
 import * as THREE from 'three';
 
-const inputState = { left: false, right: false, gas: false, brake: false };
-const FINISH_LINE_Z = -1200;
-
-class EngineAudio {
-  constructor() {
-    this.ctx = null;
-    this.osc = null;
-    this.gain = null;
-    this.filter = null;
-    this.initialized = false;
-  }
-  init() {
-    if (this.initialized) return;
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    this.ctx = new AudioContext();
-    this.osc = this.ctx.createOscillator();
-    this.osc.type = 'sawtooth';
-    this.filter = this.ctx.createBiquadFilter();
-    this.filter.type = 'lowpass';
-    this.filter.frequency.value = 450;
-    this.gain = this.ctx.createGain();
-    this.gain.gain.value = 0.08;
-    this.osc.connect(this.filter);
-    this.filter.connect(this.gain);
-    this.gain.connect(this.ctx.destination);
-    this.osc.start();
-    this.initialized = true;
-  }
-  updatePitch(speedRatio) {
-    if (!this.initialized || !this.ctx) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    const targetFreq = 55 + speedRatio * 180;
-    this.osc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.08);
-  }
-  stop() {
-    if (this.gain) {
-      this.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.2);
-    }
-  }
-}
-const engineAudio = new EngineAudio();
-
-function Himalayas() {
-  const peaks = useMemo(() => {
-    return Array.from({ length: 18 }).map((_, i) => ({
-      x: (i - 9) * 35, z: -1350, height: 70 + Math.sin(i * 1.7) * 30, radius: 30 + (i % 3) * 8
-    }));
-  }, []);
-  return (
-    <group>
-      {peaks.map((p, i) => (
-        <mesh key={i} position={[p.x, p.height / 2 - 10, p.z]}>
-          <coneGeometry args={[p.radius, p.height, 5]} />
-          <meshStandardMaterial color="#f0f4f8" roughness={0.9} flatShading />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function LingePing({ position, rotation = [0, 0, 0] }) {
-  return (
-    <group position={position} rotation={rotation} scale={1.2}>
-      <mesh position={[-1.2, 3.5, -1.2]} rotation={[0.2, 0, -0.2]}><cylinderGeometry args={[0.08, 0.1, 8, 8]} /><meshStandardMaterial color="#b5944d" /></mesh>
-      <mesh position={[1.2, 3.5, -1.2]} rotation={[0.2, 0, 0.2]}><cylinderGeometry args={[0.08, 0.1, 8, 8]} /><meshStandardMaterial color="#b5944d" /></mesh>
-      <mesh position={[-1.2, 3.5, 1.2]} rotation={[-0.2, 0, -0.2]}><cylinderGeometry args={[0.08, 0.1, 8, 8]} /><meshStandardMaterial color="#b5944d" /></mesh>
-      <mesh position={[1.2, 3.5, 1.2]} rotation={[-0.2, 0, 0.2]}><cylinderGeometry args={[0.08, 0.1, 8, 8]} /><meshStandardMaterial color="#b5944d" /></mesh>
-      <mesh position={[0, 7, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.12, 0.12, 2.8]} /><meshStandardMaterial color="#8c6a2b" /></mesh>
-      <mesh position={[0, 2.5, 0]}><boxGeometry args={[0.8, 0.08, 0.4]} /><meshStandardMaterial color="#593b13" /></mesh>
-    </group>
-  );
-}
-
-function Track() {
-  const trackRef = useRef();
-  useFrame((state) => {
-    if (trackRef.current) {
-      trackRef.current.position.z = state.camera.position.z - 100;
-    }
-  });
-  return (
-    <mesh ref={trackRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-      <planeGeometry args={[20, 500]} />
-      <meshStandardMaterial color="#333333" />
-    </mesh>
-  );
-}
-
-function DashainArch({ zPosition }) {
-  const colors = ['#0033cc', '#ffffff', '#e31c25', '#009900', '#ffcc00'];
-  return (
-    <group position={[0, 0, zPosition]}>
-      <mesh position={[-8.5, 4.5, 0]}><cylinderGeometry args={[0.35, 0.45, 9]} /><meshStandardMaterial color="#666666" /></mesh>
-      <mesh position={[8.5, 4.5, 0]}><cylinderGeometry args={[0.35, 0.45, 9]} /><meshStandardMaterial color="#666666" /></mesh>
-      <mesh position={[-8.5, 9.2, 0]}><sphereGeometry args={[0.55]} /><meshStandardMaterial color="#ff9900" emissive="#ffaa00" emissiveIntensity={3} /></mesh>
-      <mesh position={[8.5, 9.2, 0]}><sphereGeometry args={[0.55]} /><meshStandardMaterial color="#ff9900" emissive="#ffaa00" emissiveIntensity={3} /></mesh>
-      <mesh position={[0, 9, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.03, 0.03, 17.5]} /><meshBasicMaterial color="#dddddd" /></mesh>
-      {Array.from({ length: 15 }).map((_, i) => (
-        <mesh key={i} position={[-7 + i, 8.4, 0]}><planeGeometry args={[0.75, 1.1]} /><meshStandardMaterial color={colors[i % 5]} side={THREE.DoubleSide} /></mesh>
-      ))}
-    </group>
-  );
-}
-
-function EnvironmentDecorations() {
-  return (
-    <>
-      <Himalayas />
-      {Array.from({ length: 18 }).map((_, i) => <DashainArch key={i} zPosition={-70 - i * 65} />)}
-      {Array.from({ length: 7 }).map((_, i) => <LingePing key={i} position={[i % 2 === 0 ? -14 : 14, -0.5, -150 - i * 140]} rotation={[0, i % 2 === 0 ? 0.3 : -0.3, 0]} />)}
-    </>
-  );
-}
-
-function Obstacles({ obstacles }) {
-  return (
-    <>
-      {obstacles.map((obs, i) => (
-        <group key={i} position={[obs.x, 0, obs.z]}>
-          <mesh position={[0, 0.6, 0]}><coneGeometry args={[0.5, 1.3, 14]} /><meshStandardMaterial color="#ff4500" roughness={0.4} /></mesh>
-          <mesh position={[0, 0.05, 0]}><boxGeometry args={[1.1, 0.1, 1.1]} /><meshStandardMaterial color="#111111" /></mesh>
-        </group>
-      ))}
-    </>
-  );
-}
-
-function FinishLine() {
-  return (
-    <group position={[0, -0.48, FINISH_LINE_Z]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[14, 5]} /><meshStandardMaterial color="#e31c25" /></mesh>
-    </group>
-  );
-}
-
-function PlayerBike({ gameState, setGameState, obstacles, setScore, setSpeedKmh, setProgress, triggerFlash }) {
-  const bikeRef = useRef();
-  const hitObstacles = useRef(new Set());
-  const velocity = useRef(0);
-  const currentLean = useRef(0);
-  const suspensionPhase = useRef(0);
-  const { scene } = useGLTF('/bike.glb');
-
-  useFrame((state, delta) => {
-    if (!bikeRef.current || gameState !== 'PLAYING') {
-      if (gameState === 'PAUSED' || gameState === 'COUNTDOWN' || gameState === 'MENU') engineAudio.updatePitch(0);
-      return;
-    }
-
-    if (bikeRef.current.position.z <= FINISH_LINE_Z) {
-      setGameState('FINISHED');
-      engineAudio.stop();
-      return;
-    }
-
-    const maxSpeed = 55;
-    const accel = 25;
-    const drag = 12;
-    const brakeForce = 45;
-
-    if (inputState.gas) velocity.current = Math.min(maxSpeed, velocity.current + accel * delta);
-    else if (inputState.brake) velocity.current = Math.max(0, velocity.current - brakeForce * delta);
-    else velocity.current = Math.max(0, velocity.current - drag * delta);
-
-    setSpeedKmh(Math.round(velocity.current * 2.2));
-    engineAudio.updatePitch(velocity.current / maxSpeed);
-
-    const progressPercent = Math.min(100, Math.max(0, (bikeRef.current.position.z / FINISH_LINE_Z) * 100));
-    setProgress(progressPercent);
-
-    bikeRef.current.position.z -= velocity.current * delta;
-
-    const trackBoundary = 5.8;
-    const turnRate = 12 * (velocity.current / maxSpeed);
-    let targetLean = 0;
-
-    if (velocity.current > 1) {
-      if (inputState.left && bikeRef.current.position.x > -trackBoundary) {
-        bikeRef.current.position.x -= turnRate * delta; targetLean = 0.38;
-      } else if (inputState.right && bikeRef.current.position.x < trackBoundary) {
-        bikeRef.current.position.x += turnRate * delta; targetLean = -0.38;
-      }
-    }
-
-    currentLean.current = THREE.MathUtils.lerp(currentLean.current, targetLean, 0.12);
-    bikeRef.current.rotation.z = currentLean.current;
-    bikeRef.current.rotation.x = THREE.MathUtils.lerp(bikeRef.current.rotation.x, inputState.brake ? 0.08 : (inputState.gas ? -0.04 : 0), 0.1);
-
-    if (velocity.current > 2) {
-      suspensionPhase.current += delta * (velocity.current * 0.8);
-      bikeRef.current.position.y = Math.sin(suspensionPhase.current) * 0.04;
-    } else {
-      bikeRef.current.position.y = THREE.MathUtils.lerp(bikeRef.current.position.y, 0, 0.1);
-    }
-
-    obstacles.forEach((obs, index) => {
-      if (!hitObstacles.current.has(index)) {
-        const dx = Math.abs(bikeRef.current.position.x - obs.x);
-        const dz = Math.abs(bikeRef.current.position.z - obs.z);
-        if (dx < 1.3 && dz < 1.8) {
-          hitObstacles.current.add(index);
-          velocity.current = Math.max(8, velocity.current * 0.4);
-          setScore((prev) => Math.max(0, prev - 500));
-          triggerFlash();
-          if (navigator.vibrate) navigator.vibrate([200]);
-        }
-      }
-    });
-
-    const camDistance = 11 + (velocity.current / maxSpeed) * 2;
-    state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, bikeRef.current.position.x, 0.15);
-    state.camera.position.y = bikeRef.current.position.y + 4.8;
-    state.camera.position.z = bikeRef.current.position.z + camDistance;
-    state.camera.lookAt(bikeRef.current.position.x, bikeRef.current.position.y + 1.2, bikeRef.current.position.z - 25);
-  });
-
-  return (
-    <mesh ref={bikeRef} position={[0, 0, 0]}>
-      <primitive object={scene} scale={3.4} rotation={[0, Math.PI, 0]} />
-    </mesh>
-  );
-}
-
 export default function App() {
-  const [gameState, setGameState] = useState('MENU'); // Changed initial state
+  const [gameState, setGameState] = useState('MENU');
   const [countdownSequence, setCountdownSequence] = useState('3');
   const [score, setScore] = useState(5000);
   const [speedKmh, setSpeedKmh] = useState(0);
@@ -237,9 +18,31 @@ export default function App() {
   const [showGhost, setShowGhost] = useState(true);
   const [voucherCode, setVoucherCode] = useState(null);
 
-  const obstacles = useMemo(() => Array.from({ length: 65 }).map(() => ({
-    x: (Math.random() - 0.5) * 11, z: -(Math.random() * 1100) - 40
-  })), []);
+ const obstacles = useMemo(() => Array.from({ length: 40 }).map(() => {
+    const t = Math.random(); 
+    const point = trackCurve.getPointAt(t);
+    const tangent = trackCurve.getTangentAt(t);
+    // Offset left or right by up to 5 units
+    const offset = (Math.random() - 0.5) * 10;
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+    return {
+      x: point.x + normal.x * offset,
+      z: point.z + normal.z * offset,
+      t: t // Store path progress for sorting/logic
+    };
+  }), []);
+  
+  const nitroPads = useMemo(() => Array.from({ length: 15 }).map(() => {
+    const t = Math.random();
+    const point = trackCurve.getPointAt(t);
+    const tangent = trackCurve.getTangentAt(t);
+    const offset = (Math.random() - 0.5) * 10;
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+    return {
+      x: point.x + normal.x * offset,
+      z: point.z + normal.z * offset,
+    };
+  }), []);
 
   useEffect(() => {
     let timer;
@@ -309,14 +112,14 @@ export default function App() {
         {/* Collision Flash Overlay */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'red', opacity: isFlashing ? 0.4 : 0, pointerEvents: 'none', zIndex: 5, transition: 'opacity 0.1s' }} />
 
-        {/* Start Menu Layer - Unlocks Audio */}
+        {/* Start Menu Layer */}
         {gameState === 'MENU' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 50, background: 'rgba(0,0,0,0.85)' }}>
             <h1 style={{ color: '#e31c25', fontStyle: 'italic', fontSize: '48px', margin: '0 0 10px 0', textShadow: '2px 2px 5px #000' }}>BAJAJ RACING</h1>
             <p style={{ color: '#ccc', marginBottom: '30px' }}>Dashain Challenge</p>
             <button
               onClick={() => {
-                engineAudio.init(); // User interaction unlocks audio
+                engineAudio.init(); 
                 setGameState('COUNTDOWN');
               }}
               style={{ padding: '16px 40px', fontSize: '24px', fontWeight: 'bold', background: '#f7b500', color: '#000', border: 'none', borderRadius: '8px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(247,181,0,0.4)' }}
@@ -326,7 +129,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Top HUD (Adjusted Spacing for Portrait) */}
+        {/* Top HUD */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', padding: '12px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%)', zIndex: 10, boxSizing: 'border-box' }}>
           <div style={{ flexShrink: 0 }}>
             <span style={{ fontSize: '11px', color: '#ccc', textTransform: 'uppercase' }}>Score</span>
@@ -357,21 +160,33 @@ export default function App() {
           <ambientLight intensity={0.8} />
           <directionalLight position={[20, 35, 10]} intensity={1.4} />
           <Sky sunPosition={[120, 15, -120]} turbidity={0.08} rayleigh={0.4} />
+          
           <Track />
           <EnvironmentDecorations />
           <FinishLine />
           <Obstacles obstacles={obstacles} />
-          <PlayerBike gameState={gameState} setGameState={setGameState} obstacles={obstacles} setScore={setScore} setSpeedKmh={setSpeedKmh} setProgress={setProgress} triggerFlash={triggerFlash} />
+          <NitroPads pads={nitroPads} />
+          
+          <PlayerBike 
+            gameState={gameState} 
+            setGameState={setGameState} 
+            obstacles={obstacles} 
+            nitroPads={nitroPads}
+            setScore={setScore} 
+            setSpeedKmh={setSpeedKmh} 
+            setProgress={setProgress} 
+            triggerFlash={triggerFlash} 
+          />
         </Canvas>
 
-        {/* Countdown */}
+        {/* Countdown Overlay */}
         {gameState === 'COUNTDOWN' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 12 }}>
             <h1 style={{ fontSize: '120px', color: '#f7b500', textShadow: '4px 4px 10px rgba(0,0,0,0.8)', margin: 0, fontStyle: 'italic' }}>{countdownSequence}</h1>
           </div>
         )}
 
-        {/* Pause Menu */}
+        {/* Pause Menu Overlay */}
         {gameState === 'PAUSED' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 30 }}>
             <h1 style={{ color: 'white', fontSize: '48px', margin: '0 0 20px 0', letterSpacing: '2px' }}>PAUSED</h1>
@@ -388,7 +203,6 @@ export default function App() {
         {/* Mobile Controls Layer */}
         {(gameState === 'PLAYING' || gameState === 'COUNTDOWN') && (
           <div style={{ position: 'absolute', bottom: '24px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 20px', pointerEvents: 'none', zIndex: 15 }}>
-            {/* Steering */}
             <div style={{ display: 'flex', gap: '10px', pointerEvents: 'auto' }}>
               <div
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -404,7 +218,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Pedals */}
             <div style={{ display: 'flex', gap: '10px', pointerEvents: 'auto' }}>
               <div
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -422,24 +235,24 @@ export default function App() {
           </div>
         )}
 
-        {/* Finished Screen */}
+        {/* Finished Screen Layer */}
         {gameState === 'FINISHED' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.9)', color: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 20 }}>
             <h1 style={{ fontSize: '42px', margin: '0 0 10px 0', color: '#e31c25', fontStyle: 'italic', fontWeight: '900' }}>FINISH LINE!</h1>
             <p style={{ margin: '0 0 5px 0', fontSize: '18px', color: '#ccc' }}>Your Dashain Score</p>
             <h2 style={{ fontSize: '48px', color: '#f7b500', margin: '0 0 20px 0' }}>{score}</h2>
-            
+           
             <div style={{ backgroundColor: '#222', border: '2px solid #444', borderRadius: '12px', padding: '20px', textAlign: 'center', marginBottom: '30px', width: '80%', maxWidth: '350px' }}>
               <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#aaa' }}>Reward Unlocked:</p>
               <h3 style={{ margin: 0, color: '#fff', fontSize: '22px' }}>{getRewardTier(score)}</h3>
             </div>
-            
+           
             {!voucherCode ? (
               <button
                 onContextMenu={(e) => e.preventDefault()}
                 onClick={async () => {
                   try {
-                    const res = await fetch('https://bajaj-racing-game.onrender.com//api/races', {
+                    const res = await fetch('https://bajaj-racing-game.onrender.com/api/races', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ score, speedKmh })
