@@ -8,6 +8,7 @@ import { EnvironmentDecorations, Track, FinishLine, Obstacles } from './componen
 import { trackCurve } from './utils/trackPath';
 import * as THREE from 'three';
 
+
 export default function App() {
   const [gameState, setGameState] = useState('MENU');
   const [countdownSequence, setCountdownSequence] = useState('3');

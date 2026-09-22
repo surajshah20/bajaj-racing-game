@@ -1,8 +1,8 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Text } from '@react-three/drei'; // <-- Add this import
-import { trackCurve } from '../../utils/trackPath'; // Add this to your imports
+import { Text } from '@react-three/drei';
+import { trackCurve } from '../../utils/trackPath';
 
 const FINISH_LINE_Z = -1200;
 
@@ -43,30 +43,24 @@ export function Track() {
     const points = [];
     const steps = 300;
     const width = 8;
-    
-    // 1. Generate points exactly along the curve, strictly locked to Y = 0
+   
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const pt = trackCurve.getPointAt(t);
       const tangent = trackCurve.getTangentAt(t);
-      
-      // Calculate a flat normal vector pointing left/right (perpendicular to tangent)
       const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-      
-      // Left edge of the road
+     
       points.push(pt.x + normal.x * width, 0, pt.z + normal.z * width);
-      // Right edge of the road
       points.push(pt.x - normal.x * width, 0, pt.z - normal.z * width);
     }
-    
-    // 2. Stitch the points into a triangle strip ribbon
+   
     const indices = [];
     for (let i = 0; i < steps; i++) {
       const idx = i * 2;
-      indices.push(idx, idx + 1, idx + 2);     // Triangle 1
-      indices.push(idx + 2, idx + 1, idx + 3); // Triangle 2
+      indices.push(idx, idx + 1, idx + 2);
+      indices.push(idx + 2, idx + 1, idx + 3);
     }
-    
+   
     geo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
     geo.setIndex(indices);
     geo.computeVertexNormals();
@@ -74,9 +68,18 @@ export function Track() {
   }, []);
 
   return (
-    <mesh position={[0, -0.01, 0]} geometry={trackGeo}>
-      <meshStandardMaterial color="#333333" side={THREE.DoubleSide} />
-    </mesh>
+    <group>
+      {/* Massive Ground Plane to replace the white void */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]}>
+        <planeGeometry args={[3000, 3000]} />
+        <meshStandardMaterial color="#2E5C31" />
+      </mesh>
+      
+      {/* Asphalt Track */}
+      <mesh position={[0, -0.01, 0]} geometry={trackGeo}>
+        <meshStandardMaterial color="#333333" side={THREE.DoubleSide} />
+      </mesh>
+    </group>
   );
 }
 
@@ -100,49 +103,45 @@ export function EnvironmentDecorations() {
   return (
     <>
       <Himalayas />
-      
-      {/* Arches mapped along the curve */}
-      {Array.from({ length: 18 }).map((_, i) => {
-        const t = (i + 1) / 20; // Spread evenly along 0.0 to 1.0 of the track
+     
+      {/* Reduced Arches mapped along the curve (from 18 down to 8) */}
+      {Array.from({ length: 8 }).map((_, i) => {
+        const t = (i + 1) / 9; // Spread evenly along the track
         const point = trackCurve.getPointAt(t);
         const tangent = trackCurve.getTangentAt(t);
-        // Calculate the angle to face the road correctly
         const rotation = Math.atan2(tangent.x, tangent.z);
 
         return (
           <group key={`arch-${i}`} position={[point.x, 0, point.z]} rotation={[0, rotation, 0]}>
-            {/* Pass 0 so it centers on our curve point instead of offsetting */}
-            <DashainArch zPosition={0} /> 
+            <DashainArch zPosition={0} />
           </group>
         );
       })}
 
-      {/* Linge Ping mapped along the curve edges */}
       {Array.from({ length: 7 }).map((_, i) => {
         const t = (i + 1.5) / 10;
         const point = trackCurve.getPointAt(t);
         const tangent = trackCurve.getTangentAt(t);
-        // Calculate the normal vector to push them to the left or right of the road
         const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-        const offset = i % 2 === 0 ? -14 : 14; 
-        
+        const offset = i % 2 === 0 ? -14 : 14;
+       
         return (
-          <LingePing 
-            key={`ping-${i}`} 
-            position={[point.x + normal.x * offset, -0.5, point.z + normal.z * offset]} 
-            rotation={[0, Math.atan2(tangent.x, tangent.z) + (i % 2 === 0 ? 0.3 : -0.3), 0]} 
+          <LingePing
+            key={`ping-${i}`}
+            position={[point.x + normal.x * offset, -0.5, point.z + normal.z * offset]}
+            rotation={[0, Math.atan2(tangent.x, tangent.z) + (i % 2 === 0 ? 0.3 : -0.3), 0]}
           />
         );
       })}
     </>
   );
 }
+
 export function Obstacles({ obstacles }) {
   return (
     <>
       {obstacles.map((obs, i) => (
         <group key={i} position={[obs.x, 0, obs.z]}>
-          {/* Left and Right Stand Legs */}
           <mesh position={[-1.2, 0.75, 0]} rotation={[0, 0, 0.2]}>
             <boxGeometry args={[0.15, 1.6, 0.15]} />
             <meshStandardMaterial color="#222222" />
@@ -152,7 +151,6 @@ export function Obstacles({ obstacles }) {
             <meshStandardMaterial color="#222222" />
           </mesh>
 
-          {/* Top Plank (White with BAJAJ text) */}
           <mesh position={[0, 1.1, 0.05]}>
             <boxGeometry args={[2.6, 0.4, 0.1]} />
             <meshStandardMaterial color="#ffffff" />
@@ -161,7 +159,6 @@ export function Obstacles({ obstacles }) {
             BAJAJ
           </Text>
 
-          {/* Bottom Plank (Orange with SLOW DOWN text) */}
           <mesh position={[0, 0.5, 0.05]}>
             <boxGeometry args={[2.8, 0.45, 0.1]} />
             <meshStandardMaterial color="#ff5500" />
@@ -170,7 +167,6 @@ export function Obstacles({ obstacles }) {
             SLOW DOWN
           </Text>
 
-          {/* Glowing Top Lights */}
           <mesh position={[-1.1, 1.65, 0]}>
             <sphereGeometry args={[0.22]} />
             <meshStandardMaterial color="#ffaa00" emissive="#ffcc00" emissiveIntensity={2.5} />
@@ -186,11 +182,10 @@ export function Obstacles({ obstacles }) {
 }
 
 export function FinishLine() {
-  // Grab the exact start/end point of the loop (t = 0)
   const point = trackCurve.getPointAt(0);
   const tangent = trackCurve.getTangentAt(0);
   const rotation = Math.atan2(tangent.x, tangent.z);
-  
+
   return (
     <group position={[point.x, -0.48, point.z]} rotation={[0, rotation, 0]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
