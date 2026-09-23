@@ -106,18 +106,28 @@ export default function PlayerBike({ gameState, setGameState, obstacles, nitroPa
     const camPoint = trackCurve.getPointAt(camOffsetT);
    
     state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, camPoint.x + (normal.x * lateralOffset.current), 0.1);
-    state.camera.position.y = 5;
+    
+    // Dynamic Camera Bounce based on Speed
+    const speedRatio = velocity.current / maxSpeed;
+    const bounce = Math.sin(state.clock.elapsedTime * 25) * (0.06 * speedRatio);
+    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, 4.5 + bounce, 0.15);
+    
     state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, camPoint.z + (normal.z * lateralOffset.current), 0.1);
    
+    // Dynamic FOV Warp (Stretches the screen when you go fast)
+    const targetFov = 65 + (speedRatio * 18);
+    state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1);
+    state.camera.updateProjectionMatrix();
+
     const lookAheadT = (safeT + (10 / TRACK_LENGTH)) % 1.0;
     const lookAheadPoint = trackCurve.getPointAt(lookAheadT);
     state.camera.lookAt(lookAheadPoint.x, 1.5, lookAheadPoint.z);
   });
 
   return (
-    <mesh ref={bikeRef} position={[0, 0, 0]}>
-      {/* 180-degree rotation added here to face the bike forward */}
-      <primitive object={scene} scale={3.4} rotation={[0, Math.PI, 0]} />
+    // Added castShadow to the mesh and primitive so the bike casts shadows on the road
+    <mesh ref={bikeRef} position={[0, 0, 0]} castShadow>
+      <primitive object={scene} scale={3.4} rotation={[0, Math.PI, 0]} castShadow />
     </mesh>
   );
 }

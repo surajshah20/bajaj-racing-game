@@ -8,7 +8,6 @@ import { EnvironmentDecorations, Track, FinishLine, Obstacles } from './componen
 import { trackCurve } from './utils/trackPath';
 import * as THREE from 'three';
 
-
 export default function App() {
   const [gameState, setGameState] = useState('MENU');
   const [countdownSequence, setCountdownSequence] = useState('3');
@@ -19,17 +18,16 @@ export default function App() {
   const [showGhost, setShowGhost] = useState(true);
   const [voucherCode, setVoucherCode] = useState(null);
 
- const obstacles = useMemo(() => Array.from({ length: 40 }).map(() => {
+  const obstacles = useMemo(() => Array.from({ length: 40 }).map(() => {
     const t = Math.random(); 
     const point = trackCurve.getPointAt(t);
     const tangent = trackCurve.getTangentAt(t);
-    // Offset left or right by up to 5 units
     const offset = (Math.random() - 0.5) * 10;
     const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
     return {
       x: point.x + normal.x * offset,
       z: point.z + normal.z * offset,
-      t: t // Store path progress for sorting/logic
+      t: t
     };
   }), []);
   
@@ -156,10 +154,25 @@ export default function App() {
           </div>
         </div>
 
-        {/* 3D Canvas */}
-        <Canvas camera={{ fov: 65 }}>
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[20, 35, 10]} intensity={1.4} />
+        {/* 3D Canvas - Added Shadows */}
+        <Canvas shadows camera={{ fov: 65 }}>
+          {/* Fog added for depth realism */}
+          <fog attach="fog" args={['#a0b4c8', 100, 800]} />
+          
+          <ambientLight intensity={0.6} />
+          {/* Main sunlight casting realistic shadows */}
+          <directionalLight 
+            castShadow 
+            position={[100, 200, 50]} 
+            intensity={1.5} 
+            shadow-mapSize={[2048, 2048]}
+            shadow-camera-near={0.5}
+            shadow-camera-far={500}
+            shadow-camera-left={-100}
+            shadow-camera-right={100}
+            shadow-camera-top={100}
+            shadow-camera-bottom={-100}
+          />
           <Sky sunPosition={[120, 15, -120]} turbidity={0.08} rayleigh={0.4} />
           
           <Track />
