@@ -1,12 +1,15 @@
-import { useRef } from 'react';
+import { useRef, useLayoutEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { inputState, engineAudio } from '../../utils/store';
 import { trackCurve, TRACK_LENGTH } from '../../utils/trackPath';
 
-export default function PlayerBike({ gameState, setGameState, obstacles, nitroPads, setScore, setSpeedKmh, setProgress, triggerFlash }) {
-  const bikeRef = useRef();
+export default function PlayerBike({ bikeRef: externalRef, gameState, setGameState, obstacles, nitroPads, setScore, setSpeedKmh, setProgress, triggerFlash }) {
+  // App can pass its own ref so <Atmosphere followRef={bikeRef} /> can follow the bike
+  const localRef = useRef();
+  const bikeRef = externalRef ?? localRef;
+
   const hitObstacles = useRef(new Set());
   const hitNitros = useRef(new Set());
   const velocity = useRef(0);
@@ -15,6 +18,20 @@ export default function PlayerBike({ gameState, setGameState, obstacles, nitroPa
   const trackProgress = useRef(0);
   const lateralOffset = useRef(0);
   const { scene } = useGLTF('/bike.glb');
+
+  // castShadow on the <primitive> does nothing: it has to be set on every mesh inside the GLB
+  useLayoutEffect(() => {
+    scene.traverse((child) => {
+      if (!child.isMesh) return;
+      child.castShadow = true;
+      child.receiveShadow = true;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach((m) => {
+        if (m?.map) m.map.anisotropy = 8;
+        if (m) m.needsUpdate = true;
+      });
+    });
+  }, [scene]);
 
   useFrame((state, delta) => {
     if (!bikeRef.current || gameState !== 'PLAYING') {
@@ -46,11 +63,11 @@ export default function PlayerBike({ gameState, setGameState, obstacles, nitroPa
 
     const distanceToMove = velocity.current * delta;
     trackProgress.current += distanceToMove / TRACK_LENGTH;
-   
+
     const safeT = trackProgress.current % 1.0;
     const pointOnCurve = trackCurve.getPointAt(safeT);
     const tangent = trackCurve.getTangentAt(safeT);
-   
+
     const turnRate = 12 * (velocity.current / maxSpeed) * delta;
     let targetLean = 0;
 
@@ -64,7 +81,7 @@ export default function PlayerBike({ gameState, setGameState, obstacles, nitroPa
     currentLean.current = THREE.MathUtils.lerp(currentLean.current, targetLean, 0.12);
 
     const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-   
+
     bikeRef.current.position.x = pointOnCurve.x + (normal.x * lateralOffset.current);
     bikeRef.current.position.z = pointOnCurve.z + (normal.z * lateralOffset.current);
     bikeRef.current.position.y = 0;
@@ -104,16 +121,16 @@ export default function PlayerBike({ gameState, setGameState, obstacles, nitroPa
     const camDistance = 12 + (velocity.current / 55) * 3;
     const camOffsetT = Math.max(0, safeT - (camDistance / TRACK_LENGTH));
     const camPoint = trackCurve.getPointAt(camOffsetT);
-   
+
     state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, camPoint.x + (normal.x * lateralOffset.current), 0.1);
-    
+
     // Dynamic Camera Bounce based on Speed
     const speedRatio = velocity.current / maxSpeed;
     const bounce = Math.sin(state.clock.elapsedTime * 25) * (0.06 * speedRatio);
     state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, 4.5 + bounce, 0.15);
-    
+
     state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, camPoint.z + (normal.z * lateralOffset.current), 0.1);
-   
+
     // Dynamic FOV Warp (Stretches the screen when you go fast)
     const targetFov = 65 + (speedRatio * 18);
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1);
@@ -125,9 +142,10 @@ export default function PlayerBike({ gameState, setGameState, obstacles, nitroPa
   });
 
   return (
-    // Added castShadow to the mesh and primitive so the bike casts shadows on the road
-    <mesh ref={bikeRef} position={[0, 0, 0]} castShadow>
-      <primitive object={scene} scale={3.4} rotation={[0, Math.PI, 0]} castShadow />
-    </mesh>
+    <group ref={bikeRef} position={[0, 0, 0]}>
+      <primitive object={scene} scale={3.4} rotation={[0, Math.PI, 0]} />
+    </group>
   );
 }
+
+useGLTF.preload('/bike.glb');

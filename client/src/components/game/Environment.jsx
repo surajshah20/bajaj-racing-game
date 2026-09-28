@@ -1,6 +1,6 @@
 import { useRef, useMemo, useLayoutEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Text, Sky } from '@react-three/drei';
+import { Text, Sky, Environment, Lightformer } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   mergeGeometries,
@@ -241,18 +241,23 @@ function makePeak(radius, height, seed) {
 
 export function Himalayas() {
   const peaks = useMemo(() => {
+    // centre the ring on the track loop instead of the world origin
+    const pts = trackCurve.getSpacedPoints(64);
+    const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+    const cz = pts.reduce((s, p) => s + p.z, 0) / pts.length;
+
     const rnd = mulberry32(21);
     const N = 44;
     const list = [];
     for (let i = 0; i < N; i++) {
       const a = (i / N) * Math.PI * 2 + (rnd() - 0.5) * 0.05;
-      const north = Math.max(0, Math.cos(a)); // tallest range straight ahead
-      const R = 1350 + rnd() * 160;
-      const height = 60 + rnd() * 50 + north * (110 + rnd() * 90);
+      const north = Math.max(0, Math.cos(a)); // tallest range straight ahead (-z)
+      const R = 1000 + rnd() * 120;
+      const height = 70 + rnd() * 60 + north * (140 + rnd() * 110);
       const radius = height * (0.9 + rnd() * 0.5);
       list.push({
-        x: Math.sin(a) * R,
-        z: -Math.cos(a) * R,
+        x: cx + Math.sin(a) * R,
+        z: cz - Math.cos(a) * R,
         y: GROUND_Y - 10 + height / 2,
         rot: rnd() * Math.PI * 2,
         geo: makePeak(radius, height, i * 13.7),
@@ -807,44 +812,61 @@ export function FinishLine() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Atmosphere: sky, haze, sun + soft sky light                        */
-/*  Usage: <Atmosphere followRef={carRef} />  (inside <Canvas shadows>) */
+/*  Atmosphere: sky, haze, sun, soft sky light + offline reflections    */
+/*  Usage: <Atmosphere followRef={bikeRef} />  (inside <Canvas shadows>) */
 /* ------------------------------------------------------------------ */
 
-export function Atmosphere({ sun = [300, 220, -200], followRef }) {
-  const light = useRef();
-  const offset = useMemo(() => new THREE.Vector3(...sun).normalize().multiplyScalar(120), [sun]);
+const SUN = [250, 180, 200]; // behind-right of the rider: bike + mountains are front-lit
 
-  // keep the shadow frustum centred on the car
+export function Atmosphere({ sun = SUN, followRef, shadowSize = 2048 }) {
+  const light = useRef();
+  const target = useMemo(() => new THREE.Object3D(), []);
+  const offset = useMemo(() => new THREE.Vector3(...sun).normalize().multiplyScalar(120), [sun]);
+  const sunDir = useMemo(() => new THREE.Vector3(...sun).normalize().multiplyScalar(30), [sun]);
+
+  useLayoutEffect(() => {
+    if (light.current) light.current.target = target;
+  }, [target]);
+
+  // keep the shadow frustum centred on the bike
   useFrame(() => {
     const p = followRef?.current?.position;
     if (!p || !light.current) return;
     light.current.position.set(p.x + offset.x, p.y + offset.y, p.z + offset.z);
-    light.current.target.position.set(p.x, p.y, p.z);
-    light.current.target.updateMatrixWorld();
+    target.position.set(p.x, p.y, p.z);
+    target.updateMatrixWorld();
   });
 
   return (
     <>
       <fog attach="fog" args={['#c9d9ea', 250, 2400]} />
       <Sky distance={450000} sunPosition={sun} turbidity={4} rayleigh={1.2} mieCoefficient={0.005} mieDirectionalG={0.8} />
-      <hemisphereLight args={['#cfe4ff', '#3b5a36', 0.7]} />
+
+      {/* Generated in-scene (no HDR download): gives the bike paint/chrome something to reflect */}
+      <Environment resolution={256} frames={1}>
+        <color attach="background" args={['#8fa9c4']} />
+        <Lightformer form="rect" intensity={1.4} color="#cfe4ff" position={[0, 20, 0]} scale={[60, 60, 1]} onUpdate={(s) => s.lookAt(0, 0, 0)} />
+        <Lightformer form="rect" intensity={6} color="#ffe6bf" position={[sunDir.x, sunDir.y, sunDir.z]} scale={[10, 10, 1]} onUpdate={(s) => s.lookAt(0, 0, 0)} />
+        <Lightformer form="rect" intensity={0.6} color="#4d6b45" position={[0, -10, 0]} scale={[60, 60, 1]} onUpdate={(s) => s.lookAt(0, 0, 0)} />
+      </Environment>
+
+      <hemisphereLight args={['#cfe4ff', '#3b5a36', 0.35]} />
       <directionalLight
         ref={light}
         position={sun}
-        intensity={2.4}
+        intensity={2.2}
         color="#fff2dc"
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[shadowSize, shadowSize]}
         shadow-bias={-0.0004}
-        shadow-camera-left={-80}
-        shadow-camera-right={80}
-        shadow-camera-top={80}
-        shadow-camera-bottom={-80}
+        shadow-camera-left={-70}
+        shadow-camera-right={70}
+        shadow-camera-top={70}
+        shadow-camera-bottom={-70}
         shadow-camera-near={1}
         shadow-camera-far={400}
       />
-      {followRef && <primitive object={light.current?.target ?? new THREE.Object3D()} />}
+      <primitive object={target} />
     </>
   );
 }

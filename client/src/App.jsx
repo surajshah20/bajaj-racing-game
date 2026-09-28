@@ -1,10 +1,9 @@
 import { Canvas } from '@react-three/fiber';
-import { Sky } from '@react-three/drei';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { inputState, engineAudio } from './utils/store';
 import PlayerBike from './components/game/PlayerBike';
 import NitroPads from './components/game/NitroPads';
-import { EnvironmentDecorations, Track, FinishLine, Obstacles } from './components/game/Environment';
+import { EnvironmentDecorations, Track, FinishLine, Obstacles, Atmosphere } from './components/game/Environment';
 import { trackCurve } from './utils/trackPath';
 import * as THREE from 'three';
 
@@ -18,8 +17,14 @@ export default function App() {
   const [showGhost, setShowGhost] = useState(true);
   const [voucherCode, setVoucherCode] = useState(null);
 
+  // Shared with <Atmosphere> so the sun's shadow follows the bike
+  const bikeRef = useRef();
+  // Smaller shadow map on touch devices to keep the frame rate up
+  const shadowSize = window.matchMedia('(pointer: coarse)').matches ? 1024 : 2048;
+
+  // Keep spawns off the start/finish line (t near 0 / 1)
   const obstacles = useMemo(() => Array.from({ length: 40 }).map(() => {
-    const t = Math.random(); 
+    const t = 0.06 + Math.random() * 0.92;
     const point = trackCurve.getPointAt(t);
     const tangent = trackCurve.getTangentAt(t);
     const offset = (Math.random() - 0.5) * 10;
@@ -30,9 +35,9 @@ export default function App() {
       t: t
     };
   }), []);
-  
+
   const nitroPads = useMemo(() => Array.from({ length: 15 }).map(() => {
-    const t = Math.random();
+    const t = 0.06 + Math.random() * 0.92;
     const point = trackCurve.getPointAt(t);
     const tangent = trackCurve.getTangentAt(t);
     const offset = (Math.random() - 0.5) * 10;
@@ -107,7 +112,7 @@ export default function App() {
   return (
     <>
       <div id="game-container" style={{ width: '100vw', height: '100vh', margin: 0, padding: 0, overflow: 'hidden', position: 'relative', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-        
+
         {/* Collision Flash Overlay */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'red', opacity: isFlashing ? 0.4 : 0, pointerEvents: 'none', zIndex: 5, transition: 'opacity 0.1s' }} />
 
@@ -118,7 +123,7 @@ export default function App() {
             <p style={{ color: '#ccc', marginBottom: '30px' }}>Dashain Challenge</p>
             <button
               onClick={() => {
-                engineAudio.init(); 
+                engineAudio.init();
                 setGameState('COUNTDOWN');
               }}
               style={{ padding: '16px 40px', fontSize: '24px', fontWeight: 'bold', background: '#f7b500', color: '#000', border: 'none', borderRadius: '8px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(247,181,0,0.4)' }}
@@ -154,42 +159,26 @@ export default function App() {
           </div>
         </div>
 
-        {/* 3D Canvas - Added Shadows */}
-        <Canvas shadows camera={{ fov: 65 }}>
-          {/* Fog added for depth realism */}
-          <fog attach="fog" args={['#a0b4c8', 100, 800]} />
-          
-          <ambientLight intensity={0.6} />
-          {/* Main sunlight casting realistic shadows */}
-          <directionalLight 
-            castShadow 
-            position={[100, 200, 50]} 
-            intensity={1.5} 
-            shadow-mapSize={[2048, 2048]}
-            shadow-camera-near={0.5}
-            shadow-camera-far={500}
-            shadow-camera-left={-100}
-            shadow-camera-right={100}
-            shadow-camera-top={100}
-            shadow-camera-bottom={-100}
-          />
-          <Sky sunPosition={[120, 15, -120]} turbidity={0.08} rayleigh={0.4} />
-          
+        {/* 3D Canvas: sky, fog, sun, shadows and reflections all come from <Atmosphere /> */}
+        <Canvas shadows dpr={[1, 1.75]} camera={{ fov: 65, near: 0.5, far: 3500 }}>
+          <Atmosphere followRef={bikeRef} shadowSize={shadowSize} />
+
           <Track />
           <EnvironmentDecorations />
           <FinishLine />
           <Obstacles obstacles={obstacles} />
           <NitroPads pads={nitroPads} />
-          
-          <PlayerBike 
-            gameState={gameState} 
-            setGameState={setGameState} 
-            obstacles={obstacles} 
+
+          <PlayerBike
+            bikeRef={bikeRef}
+            gameState={gameState}
+            setGameState={setGameState}
+            obstacles={obstacles}
             nitroPads={nitroPads}
-            setScore={setScore} 
-            setSpeedKmh={setSpeedKmh} 
-            setProgress={setProgress} 
-            triggerFlash={triggerFlash} 
+            setScore={setScore}
+            setSpeedKmh={setSpeedKmh}
+            setProgress={setProgress}
+            triggerFlash={triggerFlash}
           />
         </Canvas>
 
@@ -255,12 +244,12 @@ export default function App() {
             <h1 style={{ fontSize: '42px', margin: '0 0 10px 0', color: '#e31c25', fontStyle: 'italic', fontWeight: '900' }}>FINISH LINE!</h1>
             <p style={{ margin: '0 0 5px 0', fontSize: '18px', color: '#ccc' }}>Your Dashain Score</p>
             <h2 style={{ fontSize: '48px', color: '#f7b500', margin: '0 0 20px 0' }}>{score}</h2>
-           
+
             <div style={{ backgroundColor: '#222', border: '2px solid #444', borderRadius: '12px', padding: '20px', textAlign: 'center', marginBottom: '30px', width: '80%', maxWidth: '350px' }}>
               <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#aaa' }}>Reward Unlocked:</p>
               <h3 style={{ margin: 0, color: '#fff', fontSize: '22px' }}>{getRewardTier(score)}</h3>
             </div>
-           
+
             {!voucherCode ? (
               <button
                 onContextMenu={(e) => e.preventDefault()}
