@@ -48,8 +48,8 @@ export default function PlayerBike({ bikeRef: externalRef, gameState, setGameSta
     if (nitroBoostTime.current > 0) nitroBoostTime.current -= delta;
     const isNitro = nitroBoostTime.current > 0;
 
-    const maxSpeed = isNitro ? 85 : 55;
-    const accel = isNitro ? 45 : 25;
+    const maxSpeed = isNitro ? 62 : 42;
+    const accel = isNitro ? 55 : 32; // snappier accel keeps the lower top speed feeling punchy
     const drag = 12;
     const brakeForce = 45;
 
@@ -118,7 +118,8 @@ export default function PlayerBike({ bikeRef: externalRef, gameState, setGameSta
       }
     });
 
-    const camDistance = 12 + (velocity.current / 55) * 3;
+    // Chase camera: closer and lower so the bike reads bigger and speed feels grounded
+    const camDistance = 6.5 + (velocity.current / 55) * 1.8;
     const camOffsetT = Math.max(0, safeT - (camDistance / TRACK_LENGTH));
     const camPoint = trackCurve.getPointAt(camOffsetT);
 
@@ -126,19 +127,20 @@ export default function PlayerBike({ bikeRef: externalRef, gameState, setGameSta
 
     // Dynamic Camera Bounce based on Speed
     const speedRatio = velocity.current / maxSpeed;
-    const bounce = Math.sin(state.clock.elapsedTime * 25) * (0.06 * speedRatio);
-    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, 4.5 + bounce, 0.15);
+    const bounce = Math.sin(state.clock.elapsedTime * 25) * (0.05 * speedRatio);
+    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, 3.0 + bounce, 0.15);
 
     state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, camPoint.z + (normal.z * lateralOffset.current), 0.1);
 
-    // Dynamic FOV Warp (Stretches the screen when you go fast)
-    const targetFov = 65 + (speedRatio * 18);
+    // Dynamic FOV Warp (Stretches the screen when you go fast) — tighter base + smaller warp
+    const targetFov = 55 + (speedRatio * 6);
     state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, targetFov, 0.1);
     state.camera.updateProjectionMatrix();
 
     const lookAheadT = (safeT + (10 / TRACK_LENGTH)) % 1.0;
     const lookAheadPoint = trackCurve.getPointAt(lookAheadT);
     state.camera.lookAt(lookAheadPoint.x, 1.5, lookAheadPoint.z);
+    state.camera.rotateZ(currentLean.current * 0.45); // bank the camera with the bike's lean — key arcade-racer cue
   });
 
   return (

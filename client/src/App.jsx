@@ -116,6 +116,14 @@ export default function App() {
         {/* Collision Flash Overlay */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'red', opacity: isFlashing ? 0.4 : 0, pointerEvents: 'none', zIndex: 5, transition: 'opacity 0.1s' }} />
 
+        {/* Speed Vignette: darkens the edges as speed rises, a cheap "going fast" cue */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 6,
+          background: 'radial-gradient(circle, transparent 40%, rgba(0,0,0,0.35) 100%)',
+          opacity: Math.min(1, speedKmh / 140),
+          transition: 'opacity 0.15s',
+        }} />
+
         {/* Start Menu Layer */}
         {gameState === 'MENU' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 50, background: 'rgba(0,0,0,0.85)' }}>
@@ -160,7 +168,7 @@ export default function App() {
         </div>
 
         {/* 3D Canvas: sky, fog, sun, shadows and reflections all come from <Atmosphere /> */}
-        <Canvas shadows dpr={[1, 1.75]} camera={{ fov: 65, near: 0.5, far: 3500 }}>
+        <Canvas shadows dpr={[1, 1.75]} camera={{ fov: 55, near: 0.5, far: 3500 }}>
           <Atmosphere followRef={bikeRef} shadowSize={shadowSize} />
 
           <Track />
