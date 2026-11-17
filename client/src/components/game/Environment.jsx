@@ -58,7 +58,7 @@ function fbm(x, y, oct = 5) {
 const ridged = (x, y) => 1 - Math.abs(2 * fbm(x, y, 4) - 1);
 
 /* ------------------------------------------------------------------ */
-/*  Procedural textures (cached, generated once)                       */
+/*  Procedural Textures                                                */
 /* ------------------------------------------------------------------ */
 
 const texCache = {};
@@ -91,19 +91,21 @@ function grain(ctx, w, h, amount) {
   ctx.putImageData(img, 0, 0);
 }
 
+// 8-Lane Kathmandu Ring Road Asphalt with yellow edge lines and dashed multi-lane markers
 const asphaltTexture = () =>
   canvasTexture('asphalt', 512, 512, (ctx, w, h) => {
-    ctx.fillStyle = '#2e2e31';
+    ctx.fillStyle = '#2d2e32';
     ctx.fillRect(0, 0, w, h);
-    // patchy repairs / stains
-    for (let i = 0; i < 260; i++) {
+
+    // Weathering patches & tire rubber marks
+    for (let i = 0; i < 300; i++) {
       const dark = Math.random() < 0.6;
-      ctx.fillStyle = dark ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.03)';
+      ctx.fillStyle = dark ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.03)';
       ctx.beginPath();
       ctx.ellipse(
         Math.random() * w,
         Math.random() * h,
-        10 + Math.random() * 50,
+        15 + Math.random() * 60,
         10 + Math.random() * 40,
         Math.random() * Math.PI,
         0,
@@ -111,21 +113,25 @@ const asphaltTexture = () =>
       );
       ctx.fill();
     }
-    // worn wheel paths
-    ctx.fillStyle = 'rgba(0,0,0,0.16)';
-    ctx.fillRect(w * 0.2, 0, w * 0.14, h);
-    ctx.fillRect(w * 0.66, 0, w * 0.14, h);
-    // edge lines + dashed centre line
-    ctx.fillStyle = 'rgba(236,236,226,0.92)';
-    ctx.fillRect(w * 0.035, 0, w * 0.018, h);
-    ctx.fillRect(w * 0.947, 0, w * 0.018, h);
-    ctx.fillRect(w * 0.5 - w * 0.008, 0, w * 0.016, h * 0.5);
-    // loose stones
-    for (let i = 0; i < 3500; i++) {
-      ctx.fillStyle = `rgba(190,190,190,${0.1 + Math.random() * 0.2})`;
+
+    // Outer Yellow Shoulders (Solid Lines)
+    ctx.fillStyle = '#f5c518';
+    ctx.fillRect(w * 0.04, 0, w * 0.018, h);
+    ctx.fillRect(w * 0.942, 0, w * 0.018, h);
+
+    // 4 Dashed White Driving Lane Dividers across the highway
+    ctx.fillStyle = 'rgba(240, 240, 235, 0.95)';
+    const laneLines = [0.22, 0.40, 0.60, 0.78];
+    laneLines.forEach((xPos) => {
+      ctx.fillRect(w * xPos, 0, w * 0.014, h * 0.45);
+    });
+
+    // Fine aggregate stones
+    for (let i = 0; i < 3000; i++) {
+      ctx.fillStyle = `rgba(180,180,180,${0.1 + Math.random() * 0.25})`;
       ctx.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5);
     }
-    grain(ctx, w, h, 0.4);
+    grain(ctx, w, h, 0.35);
   });
 
 const grassTexture = () =>
@@ -135,12 +141,12 @@ const grassTexture = () =>
     512,
     (ctx, w, h) => {
       const img = ctx.createImageData(w, h);
-      const dark = new THREE.Color('#284f25');
-      const light = new THREE.Color('#5a8c48');
+      const dark = new THREE.Color('#254d24');
+      const light = new THREE.Color('#558b43');
       const tmp = new THREE.Color();
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
-          const n = vnoise(x / 7, y / 7) * 0.5 + Math.random() * 0.5;
+          const n = vnoise(x / 8, y / 8) * 0.5 + Math.random() * 0.5;
           tmp.copy(dark).lerp(light, n);
           const i = (y * w + x) * 4;
           img.data[i] = tmp.r * 255;
@@ -151,28 +157,28 @@ const grassTexture = () =>
       }
       ctx.putImageData(img, 0, 0);
     },
-    [170, 170]
+    [240, 240]
   );
-
-const gravelTexture = () =>
-  canvasTexture('gravel', 256, 256, (ctx, w, h) => {
-    ctx.fillStyle = '#7a705f';
-    ctx.fillRect(0, 0, w, h);
-    for (let i = 0; i < 2500; i++) {
-      const g = 90 + Math.random() * 110;
-      ctx.fillStyle = `rgba(${g},${g * 0.94},${g * 0.84},0.6)`;
-      ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
-    }
-    grain(ctx, w, h, 0.3);
-  });
 
 const kerbTexture = () =>
   canvasTexture('kerb', 64, 128, (ctx, w, h) => {
-    ctx.fillStyle = '#c8211f';
+    ctx.fillStyle = '#d32f2f';
     ctx.fillRect(0, 0, w, h / 2);
-    ctx.fillStyle = '#efefef';
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, h / 2, w, h / 2);
     grain(ctx, w, h, 0.25);
+  });
+
+const gravelTexture = () =>
+  canvasTexture('gravel', 256, 256, (ctx, w, h) => {
+    ctx.fillStyle = '#6b665c';
+    ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < 2800; i++) {
+      const g = 100 + Math.random() * 110;
+      ctx.fillStyle = `rgba(${g},${g * 0.95},${g * 0.85},0.65)`;
+      ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+    }
+    grain(ctx, w, h, 0.3);
   });
 
 const checkerTexture = () =>
@@ -188,10 +194,10 @@ const checkerTexture = () =>
   });
 
 /* ------------------------------------------------------------------ */
-/*  Himalayas: displaced, vertex-coloured snow peaks in a ring         */
+/*  Kathmandu Valley Foothills & Northern Himalayan Snow Peaks        */
 /* ------------------------------------------------------------------ */
 
-function makePeak(radius, height, seed) {
+function makePeak(radius, height, seed, isNorth) {
   let g = new THREE.ConeGeometry(radius, height, 32, 20, true);
   g.deleteAttribute('normal');
   g.deleteAttribute('uv');
@@ -201,19 +207,19 @@ function makePeak(radius, height, seed) {
   const colors = new Float32Array(pos.count * 3);
   const c = new THREE.Color();
   const snowCol = new THREE.Color();
-  const rock1 = new THREE.Color('#6d6357');
-  const rock2 = new THREE.Color('#453f38');
-  const snow = new THREE.Color('#f5f8fc');
-  const snowShade = new THREE.Color('#c9d6e6');
-  const forest = new THREE.Color('#33472f');
+  const rock1 = new THREE.Color('#635a4f');
+  const rock2 = new THREE.Color('#3f3a34');
+  const snow = new THREE.Color('#f8faff');
+  const snowShade = new THREE.Color('#c6d5e5');
+  const forest = new THREE.Color('#2d422a');
 
   for (let i = 0; i < pos.count; i++) {
     let x = pos.getX(i);
     let y = pos.getY(i);
     let z = pos.getZ(i);
     const t = (y + height / 2) / height;
-    const n = fbm(x * 0.03 + seed, z * 0.03 + y * 0.04, 5);
-    const r = ridged(x * 0.02 + seed * 0.5, z * 0.02 + y * 0.03);
+    const n = fbm(x * 0.02 + seed, z * 0.02 + y * 0.03, 5);
+    const r = ridged(x * 0.015 + seed * 0.5, z * 0.015 + y * 0.02);
 
     if (t < 0.985) {
       const k = 1 + (n - 0.5) * 0.55 + (r - 0.5) * 0.35 * (0.3 + t);
@@ -224,12 +230,17 @@ function makePeak(radius, height, seed) {
     pos.setXYZ(i, x, y, z);
 
     c.copy(rock1).lerp(rock2, THREE.MathUtils.clamp((n - 0.3) * 2, 0, 1));
-    if (t < 0.18) c.lerp(forest, 1 - t / 0.18);
-    const snowLine = 0.5 + (n - 0.5) * 0.35;
-    let s = THREE.MathUtils.smoothstep(t, snowLine - 0.05, snowLine + 0.08);
-    s *= 1 - THREE.MathUtils.smoothstep(r, 0.65, 0.88) * 0.5; // rock streaks
-    snowCol.copy(snowShade).lerp(snow, n);
-    c.lerp(snowCol, s);
+    if (t < 0.28) c.lerp(forest, 1 - t / 0.28);
+
+    if (isNorth) {
+      // Tall Northern peaks (Ganesh/Langtang Himal) get snow lines
+      const snowLine = 0.42 + (n - 0.5) * 0.3;
+      let s = THREE.MathUtils.smoothstep(t, snowLine - 0.05, snowLine + 0.08);
+      s *= 1 - THREE.MathUtils.smoothstep(r, 0.65, 0.88) * 0.5;
+      snowCol.copy(snowShade).lerp(snow, n);
+      c.lerp(snowCol, s);
+    }
+
     colors[i * 3] = c.r;
     colors[i * 3 + 1] = c.g;
     colors[i * 3 + 2] = c.b;
@@ -241,26 +252,29 @@ function makePeak(radius, height, seed) {
 
 export function Himalayas() {
   const peaks = useMemo(() => {
-    // centre the ring on the track loop instead of the world origin
+    // Ring centered on Kathmandu Ring Road
     const pts = trackCurve.getSpacedPoints(64);
     const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
     const cz = pts.reduce((s, p) => s + p.z, 0) / pts.length;
 
-    const rnd = mulberry32(21);
-    const N = 44;
+    const rnd = mulberry32(42);
+    const N = 48;
     const list = [];
     for (let i = 0; i < N; i++) {
       const a = (i / N) * Math.PI * 2 + (rnd() - 0.5) * 0.05;
-      const north = Math.max(0, Math.cos(a)); // tallest range straight ahead (-z)
-      const R = 1000 + rnd() * 120;
-      const height = 70 + rnd() * 60 + north * (140 + rnd() * 110);
-      const radius = height * (0.9 + rnd() * 0.5);
+      const isNorth = Math.cos(a) < -0.2; // -Z is North in Three.js
+      const R = 1300 + rnd() * 200;
+      // Tall snow mountains to the North, rolling green hills to South/East/West
+      const height = isNorth
+        ? 220 + rnd() * 150
+        : 90 + rnd() * 60;
+      const radius = height * (1.1 + rnd() * 0.5);
       list.push({
         x: cx + Math.sin(a) * R,
-        z: cz - Math.cos(a) * R,
+        z: cz + Math.cos(a) * R,
         y: GROUND_Y - 10 + height / 2,
         rot: rnd() * Math.PI * 2,
-        geo: makePeak(radius, height, i * 13.7),
+        geo: makePeak(radius, height, i * 17.3, isNorth),
       });
     }
     return list;
@@ -278,10 +292,323 @@ export function Himalayas() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Linge Ping (bamboo swing) with knuckled bamboo + swaying seat      */
+/*  Kalanki Underpass (कलंकी अन्डरपास) Landmark                       */
 /* ------------------------------------------------------------------ */
 
-function Bamboo({ position, rotation, length = 8, radius = 0.09 }) {
+export function KalankiUnderpass() {
+  // Kalanki subterranean underpass dip on curve
+  const point = useMemo(() => trackCurve.getPointAt(0.422), []);
+  const tangent = useMemo(() => trackCurve.getTangentAt(0.422), []);
+  const rotY = Math.atan2(tangent.x, tangent.z);
+
+  return (
+    <group position={[point.x, point.y, point.z]} rotation={[0, rotY, 0]}>
+      {/* Concrete Retaining Walls flanking the road */}
+      {[-12.2, 12.2].map((x) => (
+        <group key={x} position={[x, 2.5, 0]}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[1.4, 5.0, 70]} />
+            <meshStandardMaterial color="#888782" roughness={0.8} />
+          </mesh>
+          {/* Wall capping */}
+          <mesh position={[0, 2.6, 0]}>
+            <boxGeometry args={[1.8, 0.3, 70.4]} />
+            <meshStandardMaterial color="#a3a29d" roughness={0.7} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Overhead Highway Flyover Structure spanning across the underpass */}
+      <group position={[0, 6.2, 0]}>
+        {/* Main bridge deck */}
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[26, 1.8, 14]} />
+          <meshStandardMaterial color="#505256" roughness={0.7} />
+        </mesh>
+        {/* Concrete bridge pillars */}
+        {[-11.5, 11.5].map((x) => (
+          <mesh key={x} position={[x, -3.2, 0]} castShadow>
+            <boxGeometry args={[2.0, 4.6, 12]} />
+            <meshStandardMaterial color="#7a7974" roughness={0.8} />
+          </mesh>
+        ))}
+
+        {/* Illuminated Yellow Tunnel Lights under the overpass ceiling */}
+        {[-6, 0, 6].map((x) => (
+          <group key={x} position={[x, -0.95, 0]}>
+            <mesh>
+              <boxGeometry args={[1.0, 0.15, 8.0]} />
+              <meshStandardMaterial color="#fff0b3" emissive="#ffdd66" emissiveIntensity={3.5} />
+            </mesh>
+            <pointLight color="#ffea88" intensity={3.5} distance={20} />
+          </group>
+        ))}
+
+        {/* Massive Kalanki Underpass Banner Signboard */}
+        <group position={[0, 1.4, 7.1]}>
+          <mesh>
+            <boxGeometry args={[16, 1.6, 0.3]} />
+            <meshStandardMaterial color="#005a9c" roughness={0.4} />
+          </mesh>
+          <Text position={[0, 0.25, 0.18]} fontSize={0.75} color="#ffffff" font={undefined} anchorX="center" anchorY="middle">
+            कलंकी अन्डरपास
+          </Text>
+          <Text position={[0, -0.35, 0.18]} fontSize={0.48} color="#f7b500" font={undefined} anchorX="center" anchorY="middle">
+            KALANKI UNDERPASS
+          </Text>
+        </group>
+        <group position={[0, 1.4, -7.1]} rotation={[0, Math.PI, 0]}>
+          <mesh>
+            <boxGeometry args={[16, 1.6, 0.3]} />
+            <meshStandardMaterial color="#005a9c" roughness={0.4} />
+          </mesh>
+          <Text position={[0, 0.25, 0.18]} fontSize={0.75} color="#ffffff" font={undefined} anchorX="center" anchorY="middle">
+            कलंकी अन्डरपास
+          </Text>
+          <Text position={[0, -0.35, 0.18]} fontSize={0.48} color="#f7b500" font={undefined} anchorX="center" anchorY="middle">
+            KALANKI UNDERPASS
+          </Text>
+        </group>
+      </group>
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Swayambhu Mahachaitya (स्वयम्भू) Hilltop Stupa                     */
+/* ------------------------------------------------------------------ */
+
+export function SwayambhuStupa() {
+  // Swayambhu is situated on a hill to the west of the Ring Road (near t ~ 0.464)
+  const pos = [-640, 28, -280];
+
+  return (
+    <group position={pos}>
+      {/* Lush Green Swayambhu Hill Mount */}
+      <mesh position={[0, -18, 0]} receiveShadow>
+        <cylinderGeometry args={[45, 90, 40, 32]} />
+        <meshStandardMaterial color="#365c2e" roughness={0.9} />
+      </mesh>
+
+      {/* White Stupa Hemispherical Dome (Garbha) */}
+      <mesh position={[0, 8, 0]} castShadow>
+        <sphereGeometry args={[16, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+        <meshStandardMaterial color="#f0f2f5" roughness={0.5} />
+      </mesh>
+
+      {/* Golden Square Harmika (with Buddha Wisdom Eyes) */}
+      <mesh position={[0, 18, 0]} castShadow>
+        <boxGeometry args={[7.5, 5.0, 7.5]} />
+        <meshStandardMaterial color="#d49419" metalness={0.7} roughness={0.3} />
+      </mesh>
+
+      {/* 13-Tiered Golden Conical Spire (Churamani) */}
+      <mesh position={[0, 24.5, 0]} castShadow>
+        <coneGeometry args={[3.8, 9.5, 24]} />
+        <meshStandardMaterial color="#e6a817" metalness={0.85} roughness={0.25} />
+      </mesh>
+
+      {/* Top Gilded Pinnacle Umbrella (Gajur) */}
+      <mesh position={[0, 30, 0]}>
+        <sphereGeometry args={[1.2, 16, 16]} />
+        <meshStandardMaterial color="#ffcc00" emissive="#ffaa00" emissiveIntensity={1.5} metalness={0.9} />
+      </mesh>
+
+      {/* Radiating Prayer Flag Strings down the hill */}
+      {Array.from({ length: 8 }).map((_, i) => {
+        const angle = (i / 8) * Math.PI * 2;
+        const x = Math.sin(angle) * 35;
+        const z = Math.cos(angle) * 35;
+        return (
+          <group key={i}>
+            <mesh position={[x * 0.5, 12, z * 0.5]} rotation={[0, angle, -0.6]}>
+              <cylinderGeometry args={[0.04, 0.04, 40, 4]} />
+              <meshStandardMaterial color="#ffeedd" />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Kathmandu Green Overhead Pedestrian Bridges (आकाशे पुल)           */
+/* ------------------------------------------------------------------ */
+
+function PedestrianBridge({ t, bannerText = 'शुभ विजया दशमी - HAPPY DASHAIN' }) {
+  const point = trackCurve.getPointAt(t);
+  const tangent = trackCurve.getTangentAt(t);
+  const rotY = Math.atan2(tangent.x, tangent.z);
+
+  return (
+    <group position={[point.x, point.y, point.z]} rotation={[0, rotY, 0]}>
+      {/* Main Steel Box Truss Span (crossing the 20m wide road) */}
+      <mesh position={[0, 5.6, 0]} castShadow>
+        <boxGeometry args={[24, 2.6, 2.8]} />
+        <meshStandardMaterial color="#1f5431" metalness={0.4} roughness={0.5} />
+      </mesh>
+
+      {/* Safety Railings */}
+      {[-1.3, 1.3].map((z) => (
+        <mesh key={z} position={[0, 7.2, z]}>
+          <boxGeometry args={[24, 0.8, 0.1]} />
+          <meshStandardMaterial color="#2d7345" metalness={0.5} roughness={0.4} />
+        </mesh>
+      ))}
+
+      {/* Support Columns & Dual Staircases on sidewalks */}
+      {[-12.2, 12.2].map((x) => (
+        <group key={x}>
+          {/* Main pillar */}
+          <mesh position={[x, 2.8, 0]} castShadow>
+            <cylinderGeometry args={[0.55, 0.65, 5.6, 12]} />
+            <meshStandardMaterial color="#1f5431" metalness={0.4} />
+          </mesh>
+          {/* Angled Stairway */}
+          <mesh position={[x + (x > 0 ? 3.0 : -3.0), 2.6, 0]} rotation={[0, 0, x > 0 ? -0.7 : 0.7]} castShadow>
+            <boxGeometry args={[7.2, 0.4, 2.2]} />
+            <meshStandardMaterial color="#245d37" roughness={0.6} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Festive Dashain Greeting Banner */}
+      <group position={[0, 5.6, 1.45]}>
+        <mesh>
+          <planeGeometry args={[18, 1.8]} />
+          <meshStandardMaterial color="#c61a1a" roughness={0.5} />
+        </mesh>
+        <Text position={[0, 0.2, 0.05]} fontSize={0.68} color="#f7b500" anchorX="center" anchorY="middle">
+          {bannerText.split(' - ')[0]}
+        </Text>
+        <Text position={[0, -0.4, 0.05]} fontSize={0.45} color="#ffffff" anchorX="center" anchorY="middle">
+          {bannerText.split(' - ')[1] || 'BAJAJ DASHAIN RACING'}
+        </Text>
+      </group>
+      <group position={[0, 5.6, -1.45]} rotation={[0, Math.PI, 0]}>
+        <mesh>
+          <planeGeometry args={[18, 1.8]} />
+          <meshStandardMaterial color="#c61a1a" roughness={0.5} />
+        </mesh>
+        <Text position={[0, 0.2, 0.05]} fontSize={0.68} color="#f7b500" anchorX="center" anchorY="middle">
+          {bannerText.split(' - ')[0]}
+        </Text>
+        <Text position={[0, -0.4, 0.05]} fontSize={0.45} color="#ffffff" anchorX="center" anchorY="middle">
+          {bannerText.split(' - ')[1] || 'BAJAJ DASHAIN RACING'}
+        </Text>
+      </group>
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Nepali Highway Cantilever Direction Signs                         */
+/* ------------------------------------------------------------------ */
+
+function HighwayGantry({ t, nepali, english, sub }) {
+  const point = trackCurve.getPointAt(t);
+  const tangent = trackCurve.getTangentAt(t);
+  const rotY = Math.atan2(tangent.x, tangent.z);
+
+  return (
+    <group position={[point.x, point.y, point.z]} rotation={[0, rotY, 0]}>
+      {/* Overhead Gantry Beam */}
+      <mesh position={[0, 6.2, 0]} castShadow>
+        <boxGeometry args={[23, 0.6, 0.6]} />
+        <meshStandardMaterial color="#44464a" metalness={0.7} roughness={0.3} />
+      </mesh>
+      {[-11.5, 11.5].map((x) => (
+        <mesh key={x} position={[x, 3.1, 0]} castShadow>
+          <cylinderGeometry args={[0.3, 0.35, 6.2, 12]} />
+          <meshStandardMaterial color="#44464a" metalness={0.7} roughness={0.3} />
+        </mesh>
+      ))}
+
+      {/* Green Highway Sign */}
+      <group position={[0, 6.2, 0.35]}>
+        <mesh>
+          <boxGeometry args={[12, 2.2, 0.15]} />
+          <meshStandardMaterial color="#006b38" roughness={0.4} />
+        </mesh>
+        <Text position={[0, 0.45, 0.1]} fontSize={0.65} color="#ffffff" anchorX="center" anchorY="middle">
+          {nepali}
+        </Text>
+        <Text position={[0, -0.15, 0.1]} fontSize={0.55} color="#f7b500" anchorX="center" anchorY="middle">
+          {english}
+        </Text>
+        {sub && (
+          <Text position={[0, -0.65, 0.1]} fontSize={0.32} color="#eeeeee" anchorX="center" anchorY="middle">
+            {sub}
+          </Text>
+        )}
+      </group>
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dashain Kites (चङ्गा / Changa) Floating in Autumn Sky               */
+/* ------------------------------------------------------------------ */
+
+const KITE_COLORS = ['#e31c25', '#f7b500', '#0099ff', '#00cc44', '#9933cc'];
+
+export function DashainKites() {
+  const group = useRef();
+
+  const kites = useMemo(() => {
+    const rnd = mulberry32(88);
+    return Array.from({ length: 18 }).map(() => ({
+      x: (rnd() - 0.5) * 1100,
+      y: 22 + rnd() * 45,
+      z: (rnd() - 0.5) * 1100,
+      color: KITE_COLORS[Math.floor(rnd() * KITE_COLORS.length)],
+      speed: 1.2 + rnd() * 1.5,
+      scale: 1.8 + rnd() * 1.4,
+      rotX: -0.4 + rnd() * 0.4,
+    }));
+  }, []);
+
+  useFrame(({ clock }) => {
+    if (!group.current) return;
+    const t = clock.elapsedTime;
+    group.current.children.forEach((kite, i) => {
+      kite.position.y += Math.sin(t * 1.8 + i) * 0.04;
+      kite.rotation.z = Math.sin(t * 2.2 + i * 2) * 0.18;
+      kite.rotation.y = Math.cos(t * 1.4 + i) * 0.15;
+    });
+  });
+
+  return (
+    <group ref={group}>
+      {kites.map((k, i) => (
+        <group key={i} position={[k.x, k.y, k.z]} scale={k.scale} rotation={[k.rotX, 0, 0]}>
+          {/* Diamond Kite Body */}
+          <mesh rotation={[0, 0, Math.PI / 4]}>
+            <planeGeometry args={[1.4, 1.4]} />
+            <meshBasicMaterial color={k.color} side={THREE.DoubleSide} />
+          </mesh>
+          {/* Central Bamboo Spar */}
+          <mesh position={[0, 0, 0.02]}>
+            <cylinderGeometry args={[0.02, 0.02, 1.9, 4]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+          {/* Trailing Tail Ribbon */}
+          <mesh position={[0, -1.4, 0]}>
+            <planeGeometry args={[0.15, 1.8]} />
+            <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Linge Ping (Traditional Bamboo Swing)                              */
+/* ------------------------------------------------------------------ */
+
+function Bamboo({ position, rotation, length = 8.5, radius = 0.1 }) {
   const nodes = Math.floor(length / 1.3);
   return (
     <group position={position} rotation={rotation}>
@@ -301,45 +628,35 @@ function Bamboo({ position, rotation, length = 8, radius = 0.09 }) {
 
 export function LingePing({ position, rotation = [0, 0, 0] }) {
   const swing = useRef();
-  const phase = useMemo(() => Math.random() * 6, []);
+  const phase = Math.abs((position?.[0] || 1) * 0.35 + (position?.[2] || 1) * 0.2) % 6;
 
   useFrame(({ clock }) => {
     if (swing.current) {
-      swing.current.rotation.x = Math.sin(clock.elapsedTime * 1.15 + phase) * 0.22;
+      swing.current.rotation.x = Math.sin(clock.elapsedTime * 1.25 + phase) * 0.25;
     }
   });
 
   return (
-    <group position={position} rotation={rotation} scale={1.2}>
-      <Bamboo position={[-1.2, 3.5, -1.2]} rotation={[0.2, 0, -0.2]} />
-      <Bamboo position={[1.2, 3.5, -1.2]} rotation={[0.2, 0, 0.2]} />
-      <Bamboo position={[-1.2, 3.5, 1.2]} rotation={[-0.2, 0, -0.2]} />
-      <Bamboo position={[1.2, 3.5, 1.2]} rotation={[-0.2, 0, 0.2]} />
+    <group position={position} rotation={rotation} scale={1.3}>
+      <Bamboo position={[-1.3, 3.8, -1.3]} rotation={[0.2, 0, -0.2]} />
+      <Bamboo position={[1.3, 3.8, -1.3]} rotation={[0.2, 0, 0.2]} />
+      <Bamboo position={[-1.3, 3.8, 1.3]} rotation={[-0.2, 0, -0.2]} />
+      <Bamboo position={[1.3, 3.8, 1.3]} rotation={[-0.2, 0, 0.2]} />
 
-      {/* cross beam + rope lashing */}
-      <mesh position={[0, 7, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.12, 0.12, 2.8, 8]} />
+      <mesh position={[0, 7.6, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.14, 0.14, 3.2, 8]} />
         <meshStandardMaterial color="#8c6a2b" roughness={0.8} />
       </mesh>
-      {[-0.4, 0.4].map((x) =>
-        [-0.4, 0.4].map((z) => (
-          <mesh key={`${x}${z}`} position={[x, 7.05, z]}>
-            <sphereGeometry args={[0.16, 8, 8]} />
-            <meshStandardMaterial color="#c9b58a" roughness={1} />
-          </mesh>
-        ))
-      )}
 
-      {/* swinging seat */}
-      <group ref={swing} position={[0, 7, 0]}>
-        {[-0.35, 0.35].map((x) => (
-          <mesh key={x} position={[x, -2.25, 0]}>
-            <cylinderGeometry args={[0.025, 0.025, 4.5, 6]} />
+      <group ref={swing} position={[0, 7.6, 0]}>
+        {[-0.38, 0.38].map((x) => (
+          <mesh key={x} position={[x, -2.4, 0]}>
+            <cylinderGeometry args={[0.025, 0.025, 4.8, 6]} />
             <meshStandardMaterial color="#d8c9a3" roughness={1} />
           </mesh>
         ))}
-        <mesh position={[0, -4.5, 0]} castShadow>
-          <boxGeometry args={[0.9, 0.08, 0.42]} />
+        <mesh position={[0, -4.8, 0]} castShadow>
+          <boxGeometry args={[1.0, 0.09, 0.45]} />
           <meshStandardMaterial color="#593b13" roughness={0.85} />
         </mesh>
       </group>
@@ -348,10 +665,10 @@ export function LingePing({ position, rotation = [0, 0, 0] }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Track: layered strips (asphalt, kerbs, gravel shoulders)           */
+/*  Track: Kathmandu Ring Road 8-Lane Strip Mesh                      */
 /* ------------------------------------------------------------------ */
 
-function buildStrip(a, b, y, tileLen, steps = 400) {
+function buildStrip(a, b, y, tileLen, steps = 900) {
   const L = trackCurve.getLength();
   const pos = [];
   const uv = [];
@@ -365,7 +682,7 @@ function buildStrip(a, b, y, tileLen, steps = 400) {
     const len = Math.hypot(nx, nz) || 1;
     const ux = nx / len;
     const uz = nz / len;
-    pos.push(p.x + ux * a, y, p.z + uz * a, p.x + ux * b, y, p.z + uz * b);
+    pos.push(p.x + ux * a, p.y + y, p.z + uz * a, p.x + ux * b, p.y + y, p.z + uz * b);
     const v = (t * L) / tileLen;
     uv.push(0, v, 1, v);
   }
@@ -381,17 +698,48 @@ function buildStrip(a, b, y, tileLen, steps = 400) {
   return geo;
 }
 
+// Elevated Flyover Support Columns & Guardrails
+function buildFlyoverPillars() {
+  const steps = 180;
+  const pillars = [];
+  for (let i = 0; i < steps; i++) {
+    const t = i / steps;
+    const p = trackCurve.getPointAt(t);
+    if (p.y >= 3.0) {
+      const tg = trackCurve.getTangentAt(t);
+      const nx = -tg.z;
+      const nz = tg.x;
+      const len = Math.hypot(nx, nz) || 1;
+      const ux = nx / len;
+      const uz = nz / len;
+      const h = p.y - GROUND_Y;
+      [-10.8, 10.8].forEach((offset) => {
+        pillars.push({
+          x: p.x + ux * offset,
+          y: GROUND_Y + h / 2,
+          z: p.z + uz * offset,
+          h,
+        });
+      });
+    }
+  }
+  return pillars;
+}
+
 export function Track() {
   const geos = useMemo(
     () => ({
-      road: buildStrip(-8, 8, -0.01, 24),
-      kerbL: buildStrip(-9.3, -8, -0.02, 4),
-      kerbR: buildStrip(8, 9.3, -0.02, 4),
-      shoulderL: buildStrip(-12.5, -9.3, -0.04, 3.2),
-      shoulderR: buildStrip(9.3, 12.5, -0.04, 3.2),
+      road: buildStrip(-10.0, 10.0, -0.01, 28, 900),
+      kerbL: buildStrip(-11.2, -10.0, -0.02, 4, 900),
+      kerbR: buildStrip(10.0, 11.2, -0.02, 4, 900),
+      shoulderL: buildStrip(-15.0, -11.2, -0.04, 5, 900),
+      shoulderR: buildStrip(11.2, 15.0, -0.04, 5, 900),
     }),
     []
   );
+
+  const flyoverPillars = useMemo(() => buildFlyoverPillars(), []);
+
   const maps = useMemo(
     () => ({
       asphalt: asphaltTexture(),
@@ -404,20 +752,28 @@ export function Track() {
 
   return (
     <group>
-      {/* Ground */}
+      {/* Kathmandu Valley Ground */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, GROUND_Y, 0]} receiveShadow>
-        <planeGeometry args={[4000, 4000]} />
+        <planeGeometry args={[5000, 5000]} />
         <meshStandardMaterial map={maps.grass} roughness={1} />
       </mesh>
 
-      {/* Gravel shoulders */}
+      {/* Flyover Bridge Support Columns reaching from elevated highway down to ground */}
+      {flyoverPillars.map((pil, idx) => (
+        <mesh key={`pil-${idx}`} position={[pil.x, pil.y, pil.z]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.7, 0.85, pil.h, 12]} />
+          <meshStandardMaterial color="#686b73" roughness={0.7} />
+        </mesh>
+      ))}
+
+      {/* Sidewalks / Gravel shoulders */}
       {[geos.shoulderL, geos.shoulderR].map((g, i) => (
         <mesh key={`sh${i}`} geometry={g} receiveShadow>
           <meshStandardMaterial map={maps.gravel} roughness={1} side={THREE.DoubleSide} />
         </mesh>
       ))}
 
-      {/* Red / white kerbs */}
+      {/* Red & White Safety Kerbs */}
       {[geos.kerbL, geos.kerbR].map((g, i) => (
         <mesh key={`k${i}`} geometry={g} receiveShadow>
           <meshStandardMaterial
@@ -431,12 +787,12 @@ export function Track() {
         </mesh>
       ))}
 
-      {/* Asphalt */}
+      {/* Main 8-Lane Asphalt Highway */}
       <mesh geometry={geos.road} receiveShadow>
         <meshStandardMaterial
           map={maps.asphalt}
           roughness={0.88}
-          metalness={0.02}
+          metalness={0.04}
           side={THREE.DoubleSide}
           polygonOffset
           polygonOffsetFactor={-1}
@@ -448,231 +804,213 @@ export function Track() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Dashain arch: draped, fluttering prayer-flag bunting               */
+/*  Solar Highway Streetlights along Outer Road Shoulders             */
 /* ------------------------------------------------------------------ */
 
-export function DashainArch({ zPosition }) {
-  const colors = ['#0033cc', '#ffffff', '#e31c25', '#009900', '#ffcc00'];
-  const flags = useRef();
-  const phase = useMemo(() => Math.random() * 10, []);
-
-  const curve = useMemo(
-    () =>
-      new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(-8.5, 9, 0),
-        new THREE.Vector3(0, 7.8, 0),
-        new THREE.Vector3(8.5, 9, 0)
-      ),
-    []
-  );
-  const stringGeo = useMemo(() => new THREE.TubeGeometry(curve, 32, 0.03, 5, false), [curve]);
-  const flagPts = useMemo(
-    () => Array.from({ length: 15 }).map((_, i) => curve.getPoint((i + 1) / 16)),
-    [curve]
-  );
-
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
-    flags.current?.children.forEach((g, i) => {
-      g.rotation.y = Math.sin(t * 2.4 + i * 0.7 + phase) * 0.3;
-      g.rotation.x = Math.sin(t * 3.1 + i * 1.3 + phase) * 0.06;
-    });
-  });
-
-  return (
-    <group position={[0, 0, zPosition]}>
-      {[-8.5, 8.5].map((x) => (
-        <group key={x}>
-          <mesh position={[x, 0.25, 0]} castShadow receiveShadow>
-            <cylinderGeometry args={[0.75, 0.85, 0.5, 16]} />
-            <meshStandardMaterial color="#9a9a94" roughness={0.95} />
-          </mesh>
-          <mesh position={[x, 4.75, 0]} castShadow>
-            <cylinderGeometry args={[0.3, 0.42, 8.5, 16]} />
-            <meshStandardMaterial color="#6b6d70" roughness={0.45} metalness={0.55} />
-          </mesh>
-          <mesh position={[x, 9.2, 0]}>
-            <sphereGeometry args={[0.55, 20, 20]} />
-            <meshStandardMaterial color="#ff9900" emissive="#ffaa00" emissiveIntensity={2.5} />
-          </mesh>
-        </group>
-      ))}
-
-      <mesh geometry={stringGeo}>
-        <meshStandardMaterial color="#d9d2c0" roughness={0.9} />
-      </mesh>
-
-      <group ref={flags}>
-        {flagPts.map((p, i) => (
-          <group key={i} position={[p.x, p.y, 0]}>
-            <mesh position={[0, -0.55, 0]} castShadow>
-              <planeGeometry args={[0.75, 1.1]} />
-              <meshStandardMaterial color={colors[i % 5]} side={THREE.DoubleSide} roughness={0.95} />
-            </mesh>
-          </group>
-        ))}
-      </group>
-    </group>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Instanced forest + roadside marker posts                           */
-/* ------------------------------------------------------------------ */
-
-function Forest({ count = 420 }) {
-  const foliageRef = useRef();
-  const trunkRef = useRef();
-
-  const foliageGeo = useMemo(() => {
-    const parts = [
-      [2.6, 4.2, 3.2],
-      [2.1, 3.8, 5.0],
-      [1.5, 3.4, 6.6],
-    ].map(([r, h, y]) => {
-      const g = new THREE.ConeGeometry(r, h, 7);
-      g.translate(0, y, 0);
-      return g;
-    });
-    return mergeGeometries(parts);
-  }, []);
-  const trunkGeo = useMemo(() => {
-    const g = new THREE.CylinderGeometry(0.22, 0.32, 2.6, 6);
-    g.translate(0, 1.3, 0);
-    return g;
-  }, []);
+function RoadsideStreetlights({ count = 70 }) {
+  const polesRef = useRef();
 
   useLayoutEffect(() => {
-    const rnd = mulberry32(7);
     const dummy = new THREE.Object3D();
-    const col = new THREE.Color();
-    const samples = trackCurve.getSpacedPoints(300);
-    let placed = 0;
-
-    for (let i = 0; i < count; i++) {
-      for (let attempt = 0; attempt < 6; attempt++) {
-        const t = rnd();
-        const p = trackCurve.getPointAt(t);
-        const tg = trackCurve.getTangentAt(t);
-        const n = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
-        const side = rnd() < 0.5 ? -1 : 1;
-        const off = 20 + Math.pow(rnd(), 1.6) * 90;
-        const x = p.x + n.x * off * side;
-        const z = p.z + n.z * off * side;
-
-        // stay clear of any other stretch of track
-        if (samples.some((s) => Math.hypot(s.x - x, s.z - z) < 18)) continue;
-
-        const s = 0.7 + rnd() * 1.1;
-        dummy.position.set(x, GROUND_Y, z);
-        dummy.rotation.set(0, rnd() * Math.PI * 2, 0);
-        dummy.scale.set(s * (0.85 + rnd() * 0.3), s, s * (0.85 + rnd() * 0.3));
-        dummy.updateMatrix();
-        foliageRef.current.setMatrixAt(placed, dummy.matrix);
-        trunkRef.current.setMatrixAt(placed, dummy.matrix);
-        col.setHSL(0.3 + rnd() * 0.06, 0.45, 0.14 + rnd() * 0.1);
-        foliageRef.current.setColorAt(placed, col);
-        placed++;
-        break;
-      }
-    }
-    foliageRef.current.count = placed;
-    trunkRef.current.count = placed;
-    foliageRef.current.instanceMatrix.needsUpdate = true;
-    trunkRef.current.instanceMatrix.needsUpdate = true;
-    if (foliageRef.current.instanceColor) foliageRef.current.instanceColor.needsUpdate = true;
-  }, [count]);
-
-  return (
-    <group>
-      <instancedMesh ref={foliageRef} args={[foliageGeo, undefined, count]} castShadow frustumCulled={false}>
-        <meshStandardMaterial roughness={1} flatShading />
-      </instancedMesh>
-      <instancedMesh ref={trunkRef} args={[trunkGeo, undefined, count]} castShadow frustumCulled={false}>
-        <meshStandardMaterial color="#4a3320" roughness={1} />
-      </instancedMesh>
-    </group>
-  );
-}
-
-function RoadsideMarkers() {
-  const postRef = useRef();
-  const capRef = useRef();
-  const count = useMemo(() => Math.floor(trackCurve.getLength() / 25) * 2, []);
-
-  useLayoutEffect(() => {
-    const d = new THREE.Object3D();
     let k = 0;
-    for (let i = 0; i < count / 2; i++) {
-      const t = i / (count / 2);
+    for (let i = 0; i < count; i++) {
+      const t = i / count;
       const p = trackCurve.getPointAt(t);
       const tg = trackCurve.getTangentAt(t);
-      const n = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
+      const norm = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
+      const rotY = Math.atan2(tg.x, tg.z);
+
+      // Place lamps on BOTH outer roadside shoulders (12.2m to left and right)
       [-1, 1].forEach((side) => {
-        d.position.set(p.x + n.x * 10.8 * side, 0.45, p.z + n.z * 10.8 * side);
-        d.rotation.set(0, 0, 0);
-        d.updateMatrix();
-        postRef.current.setMatrixAt(k, d.matrix);
-        d.position.y = 0.78;
-        d.updateMatrix();
-        capRef.current.setMatrixAt(k, d.matrix);
+        dummy.position.set(p.x + norm.x * 12.2 * side, p.y, p.z + norm.z * 12.2 * side);
+        dummy.rotation.set(0, rotY + (side > 0 ? 0 : Math.PI), 0);
+        dummy.updateMatrix();
+        polesRef.current.setMatrixAt(k, dummy.matrix);
         k++;
       });
     }
-    postRef.current.instanceMatrix.needsUpdate = true;
-    capRef.current.instanceMatrix.needsUpdate = true;
+    polesRef.current.instanceMatrix.needsUpdate = true;
   }, [count]);
+
+  const poleGeo = useMemo(() => {
+    // Single-arm cantilever highway lamp post angled over the roadway
+    const parts = [];
+    const mainPole = new THREE.CylinderGeometry(0.12, 0.16, 7.5, 8);
+    mainPole.translate(0, 3.75, 0);
+    parts.push(mainPole);
+
+    const crossArm = new THREE.BoxGeometry(2.5, 0.14, 0.14);
+    crossArm.translate(-1.0, 7.3, 0);
+    parts.push(crossArm);
+
+    const solarPanel = new THREE.BoxGeometry(1.6, 0.08, 1.0);
+    solarPanel.rotateX(-0.35);
+    solarPanel.translate(-1.0, 7.7, 0);
+    parts.push(solarPanel);
+
+    return mergeGeometries(parts);
+  }, []);
+
+  return (
+    <instancedMesh ref={polesRef} args={[poleGeo, undefined, count * 2]} castShadow frustumCulled={false}>
+      <meshStandardMaterial color="#60646c" metalness={0.65} roughness={0.35} />
+    </instancedMesh>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Roblox-Style City Skyscrapers & Neon Billboards                   */
+/* ------------------------------------------------------------------ */
+
+const NEON_COLORS = ['#00e5ff', '#ff007f', '#f7b500', '#00ff88', '#9d00ff'];
+
+function RobloxCityBuildings() {
+  const buildings = useMemo(() => {
+    const list = [];
+    const rnd = mulberry32(101);
+    // Gongabu Boulevard to Maharajgunj urban sectors (t: 0.65 to 0.79)
+    // and Airport runway sector (t: 0.88 to 0.96)
+    const sectors = [
+      { start: 0.65, end: 0.79, count: 18 },
+      { start: 0.88, end: 0.96, count: 10 },
+    ];
+
+    sectors.forEach((sec) => {
+      for (let i = 0; i < sec.count; i++) {
+        const t = sec.start + (i / sec.count) * (sec.end - sec.start);
+        const p = trackCurve.getPointAt(t);
+        const tg = trackCurve.getTangentAt(t);
+        const norm = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
+        const side = i % 2 === 0 ? 1 : -1;
+        const dist = 24 + rnd() * 18;
+        const width = 16 + rnd() * 12;
+        const depth = 14 + rnd() * 10;
+        const height = 28 + rnd() * 45;
+        const neonColor = NEON_COLORS[Math.floor(rnd() * NEON_COLORS.length)];
+        const rotY = Math.atan2(tg.x, tg.z) + (rnd() - 0.5) * 0.2;
+
+        list.push({
+          x: p.x + norm.x * dist * side,
+          y: p.y + height / 2 - 0.6,
+          z: p.z + norm.z * dist * side,
+          width,
+          depth,
+          height,
+          neonColor,
+          rotY,
+          hasBillboard: rnd() > 0.45,
+          billboardText: rnd() > 0.5 ? 'BAJAJ PULSAR' : 'HAPPY DASHAIN',
+        });
+      }
+    });
+
+    return list;
+  }, []);
 
   return (
     <group>
-      <instancedMesh ref={postRef} args={[undefined, undefined, count]} castShadow frustumCulled={false}>
-        <boxGeometry args={[0.12, 1.1, 0.12]} />
-        <meshStandardMaterial color="#e9e9e4" roughness={0.6} />
-      </instancedMesh>
-      <instancedMesh ref={capRef} args={[undefined, undefined, count]} frustumCulled={false}>
-        <boxGeometry args={[0.125, 0.22, 0.125]} />
-        <meshStandardMaterial color="#d3241f" emissive="#a01010" emissiveIntensity={0.6} roughness={0.4} />
-      </instancedMesh>
+      {buildings.map((b, idx) => (
+        <group key={`bldg-${idx}`} position={[b.x, b.y, b.z]} rotation={[0, b.rotY, 0]}>
+          {/* Main Skyscraper Body */}
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[b.width, b.height, b.depth]} />
+            <meshStandardMaterial color="#1a202c" roughness={0.4} metalness={0.7} />
+          </mesh>
+
+          {/* Glowing Roblox Neon Roof Trim */}
+          <mesh position={[0, b.height / 2 + 0.3, 0]}>
+            <boxGeometry args={[b.width + 0.6, 0.6, b.depth + 0.6]} />
+            <meshStandardMaterial
+              color={b.neonColor}
+              emissive={b.neonColor}
+              emissiveIntensity={2.5}
+              roughness={0.2}
+            />
+          </mesh>
+
+          {/* Rooftop Antenna / Spire with Red Warning Beacon */}
+          <mesh position={[0, b.height / 2 + 3.5, 0]}>
+            <cylinderGeometry args={[0.08, 0.25, 7.0, 6]} />
+            <meshStandardMaterial color="#718096" metalness={0.9} />
+          </mesh>
+          <mesh position={[0, b.height / 2 + 7.2, 0]}>
+            <sphereGeometry args={[0.35, 8, 8]} />
+            <meshStandardMaterial color="#ff0044" emissive="#ff0044" emissiveIntensity={5} />
+          </mesh>
+
+          {/* Luminous High-Tech Billboard */}
+          {b.hasBillboard && (
+            <group position={[0, b.height * 0.2, b.depth / 2 + 0.25]}>
+              <mesh>
+                <boxGeometry args={[b.width * 0.75, 5.5, 0.3]} />
+                <meshStandardMaterial color="#0b0f19" roughness={0.3} />
+              </mesh>
+              <Text
+                position={[0, 0.3, 0.2]}
+                fontSize={1.2}
+                color={b.neonColor}
+                anchorX="center"
+                anchorY="middle"
+              >
+                {b.billboardText}
+              </Text>
+              <Text
+                position={[0, -1.2, 0.2]}
+                fontSize={0.65}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="middle"
+              >
+                DEFINITELY MALE • 2083
+              </Text>
+            </group>
+          )}
+        </group>
+      ))}
     </group>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Scene decorations                                                  */
+/*  Scene Decorations: Kathmandu Ring Road Master Environment         */
 /* ------------------------------------------------------------------ */
 
 export function EnvironmentDecorations() {
   return (
     <>
       <Himalayas />
-      <Forest />
-      <RoadsideMarkers />
+      <KalankiUnderpass />
+      <SwayambhuStupa />
+      <DashainKites />
+      <RoadsideStreetlights count={70} />
+      <RobloxCityBuildings />
 
-      {Array.from({ length: 8 }).map((_, i) => {
-        const t = (i + 1) / 9;
-        const point = trackCurve.getPointAt(t);
-        const tangent = trackCurve.getTangentAt(t);
-        const rotation = Math.atan2(tangent.x, tangent.z);
+      {/* Overhead Pedestrian Bridges (आकाशे पुल) at key sectors */}
+      <PedestrianBridge t={0.06} bannerText="शुभ विजया दशमी - KOTESHWOR" />
+      <PedestrianBridge t={0.28} bannerText="बल्खु चोक - BALKHU SECTOR" />
+      <PedestrianBridge t={0.62} bannerText="नयाँ बसपार्क - GONGABU BUS PARK" />
+      <PedestrianBridge t={0.73} bannerText="महाराजगन्ज - NARAYAN GOPAL CHOWK" />
 
-        return (
-          <group key={`arch-${i}`} position={[point.x, 0, point.z]} rotation={[0, rotation, 0]}>
-            <DashainArch zPosition={0} />
-          </group>
-        );
-      })}
+      {/* Overhead Highway Direction Signs */}
+      <HighwayGantry t={0.02} nepali="कोटेश्वर चोक" english="KOTESHWOR INTERCHANGE" sub="<- भक्तपुर Bhaktapur | विमानस्थल TIA ->" />
+      <HighwayGantry t={0.14} nepali="सातदोबाटो" english="SATDOBATO CHOWK" sub="पाटन Patan | गोदावरी Godawari" />
+      <HighwayGantry t={0.35} nepali="कलंकी अन्डरपास" english="KALANKI UNDERPASS" sub="थानकोट Thankot | नागढुंगा Highway" />
+      <HighwayGantry t={0.45} nepali="स्वयम्भू महाचैत्य" english="SWAYAMBHU STUPA" sub="Monkey Temple Corridor" />
+      <HighwayGantry t={0.54} nepali="बालाजु बाइपास" english="BALAJU BYPASS" sub="नुवाकोट Nuwakot | माछापोखरी" />
+      <HighwayGantry t={0.79} nepali="चावहिल / बौद्ध" english="CHABAHIL / BOUDHA" sub="पशुपतिनाथ Pashupatinath" />
+      <HighwayGantry t={0.88} nepali="त्रिभुवन विमानस्थल" english="TRIBHUVAN AIRPORT" sub="Runway Approach Straight" />
 
-      {Array.from({ length: 7 }).map((_, i) => {
-        const t = (i + 1.5) / 10;
-        const point = trackCurve.getPointAt(t);
-        const tangent = trackCurve.getTangentAt(t);
-        const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-        const offset = i % 2 === 0 ? -14 : 14;
-
+      {/* Linge Ping (Dashain Bamboo Swings) in roadside green spaces */}
+      {[0.12, 0.22, 0.52, 0.82].map((t, idx) => {
+        const pt = trackCurve.getPointAt(t);
+        const tg = trackCurve.getTangentAt(t);
+        const normal = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
+        const side = idx % 2 === 0 ? 1 : -1;
         return (
           <LingePing
-            key={`ping-${i}`}
-            position={[point.x + normal.x * offset, -0.5, point.z + normal.z * offset]}
-            rotation={[0, Math.atan2(tangent.x, tangent.z) + (i % 2 === 0 ? 0.3 : -0.3), 0]}
+            key={idx}
+            position={[pt.x + normal.x * 24 * side, pt.y || 0, pt.z + normal.z * 24 * side]}
+            rotation={[0, Math.atan2(tg.x, tg.z) + (side > 0 ? 0.3 : -0.3), 0]}
           />
         );
       })}
@@ -681,7 +1019,7 @@ export function EnvironmentDecorations() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Obstacles: bajaj barricade with alternating hazard lamps + cones   */
+/*  Obstacles: Bajaj Barricades & Traffic Hazards                      */
 /* ------------------------------------------------------------------ */
 
 function Barricade({ obs, index }) {
@@ -689,63 +1027,50 @@ function Barricade({ obs, index }) {
   const lampB = useRef();
 
   useFrame(({ clock }) => {
-    const on = Math.sin(clock.elapsedTime * 5 + index) > 0;
+    const on = Math.sin(clock.elapsedTime * 6 + index) > 0;
     if (lampA.current) lampA.current.emissiveIntensity = on ? 4 : 0.2;
     if (lampB.current) lampB.current.emissiveIntensity = on ? 0.2 : 4;
   });
 
   return (
-    <group position={[obs.x, 0, obs.z]}>
-      {[-1.2, 1.2].map((x) => (
+    <group position={[obs.x, obs.y || 0, obs.z]} rotation={[0, obs.rotation || 0, 0]}>
+      {[-1.3, 1.3].map((x) => (
         <group key={x}>
-          <mesh position={[x, 0.06, 0]} castShadow receiveShadow>
-            <boxGeometry args={[0.5, 0.12, 0.5]} />
-            <meshStandardMaterial color="#8d8d88" roughness={0.95} />
+          <mesh position={[x, 0.08, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.5, 0.16, 0.5]} />
+            <meshStandardMaterial color="#888782" roughness={0.9} />
           </mesh>
-          <mesh position={[x, 0.85, 0]} rotation={[0, 0, x < 0 ? 0.2 : -0.2]} castShadow>
-            <boxGeometry args={[0.15, 1.6, 0.15]} />
+          <mesh position={[x, 0.9, 0]} rotation={[0, 0, x < 0 ? 0.2 : -0.2]} castShadow>
+            <boxGeometry args={[0.15, 1.7, 0.15]} />
             <meshStandardMaterial color="#2a2a2c" roughness={0.5} metalness={0.6} />
           </mesh>
         </group>
       ))}
 
-      <mesh position={[0, 1.1, 0.05]} castShadow>
-        <boxGeometry args={[2.6, 0.4, 0.1]} />
-        <meshStandardMaterial color="#f2f2ee" roughness={0.45} />
+      <mesh position={[0, 1.15, 0.05]} castShadow>
+        <boxGeometry args={[2.8, 0.42, 0.1]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.4} />
       </mesh>
-      <Text position={[0, 1.1, 0.11]} fontSize={0.25} color="#0033cc" anchorX="center" anchorY="middle">
+      <Text position={[0, 1.15, 0.11]} fontSize={0.26} color="#0033cc" anchorX="center" anchorY="middle">
         BAJAJ
       </Text>
 
-      <mesh position={[0, 0.5, 0.05]} castShadow>
-        <boxGeometry args={[2.8, 0.45, 0.1]} />
+      <mesh position={[0, 0.52, 0.05]} castShadow>
+        <boxGeometry args={[3.0, 0.46, 0.1]} />
         <meshStandardMaterial color="#ff5500" roughness={0.45} />
       </mesh>
-      <Text position={[0, 0.5, 0.11]} fontSize={0.28} color="#ffffff" anchorX="center" anchorY="middle">
+      <Text position={[0, 0.52, 0.11]} fontSize={0.28} color="#ffffff" anchorX="center" anchorY="middle">
         SLOW DOWN
       </Text>
 
-      <mesh position={[-1.1, 1.65, 0]}>
+      <mesh position={[-1.2, 1.7, 0]}>
         <sphereGeometry args={[0.22, 16, 16]} />
         <meshStandardMaterial ref={lampA} color="#ffaa00" emissive="#ffcc00" emissiveIntensity={4} />
       </mesh>
-      <mesh position={[1.1, 1.65, 0]}>
+      <mesh position={[1.2, 1.7, 0]}>
         <sphereGeometry args={[0.22, 16, 16]} />
         <meshStandardMaterial ref={lampB} color="#ffaa00" emissive="#ffcc00" emissiveIntensity={0.2} />
       </mesh>
-
-      {[-2.1, 2.1].map((x) => (
-        <group key={`cone${x}`} position={[x, 0, 0.7]}>
-          <mesh position={[0, 0.3, 0]} castShadow>
-            <coneGeometry args={[0.2, 0.6, 14]} />
-            <meshStandardMaterial color="#ff6a00" roughness={0.6} />
-          </mesh>
-          <mesh position={[0, 0.32, 0]}>
-            <cylinderGeometry args={[0.135, 0.15, 0.1, 14]} />
-            <meshStandardMaterial color="#f4f4f4" roughness={0.5} />
-          </mesh>
-        </group>
-      ))}
     </group>
   );
 }
@@ -761,7 +1086,7 @@ export function Obstacles({ obstacles }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Finish line: checkered strip + gantry                              */
+/*  Finish Line at Koteshwor (कोटेश्वर)                                */
 /* ------------------------------------------------------------------ */
 
 export function FinishLine() {
@@ -771,10 +1096,10 @@ export function FinishLine() {
   const checker = useMemo(() => checkerTexture(), []);
 
   return (
-    <group position={[point.x, 0, point.z]} rotation={[0, rotation, 0]}>
-      {/* sits just above the asphalt (the old -0.48 hid it under the road) */}
+    <group position={[point.x, point.y || 0, point.z]} rotation={[0, rotation, 0]}>
+      {/* Checkered Finish Carpet across all lanes */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
-        <planeGeometry args={[16, 4]} />
+        <planeGeometry args={[20, 5]} />
         <meshStandardMaterial
           map={checker}
           roughness={0.8}
@@ -784,51 +1109,48 @@ export function FinishLine() {
         />
       </mesh>
 
-      {[-9.5, 9.5].map((x) => (
-        <mesh key={x} position={[x, 3.6, 0]} castShadow>
-          <cylinderGeometry args={[0.25, 0.3, 7.2, 12]} />
-          <meshStandardMaterial color="#c8211f" roughness={0.5} metalness={0.3} />
+      {/* Massive Overhead Finish Gantry */}
+      {[-11.5, 11.5].map((x) => (
+        <mesh key={x} position={[x, 4.0, 0]} castShadow>
+          <cylinderGeometry args={[0.35, 0.42, 8.0, 14]} />
+          <meshStandardMaterial color="#c8211f" roughness={0.45} metalness={0.4} />
         </mesh>
       ))}
-      <mesh position={[0, 7.1, 0]} castShadow>
-        <boxGeometry args={[19.6, 1.5, 0.3]} />
-        <meshStandardMaterial color="#141416" roughness={0.6} />
+
+      <mesh position={[0, 7.8, 0]} castShadow>
+        <boxGeometry args={[23.6, 1.8, 0.4]} />
+        <meshStandardMaterial color="#111215" roughness={0.5} />
       </mesh>
-      <Text position={[0, 7.1, 0.17]} fontSize={0.95} color="#ffffff" anchorX="center" anchorY="middle">
-        FINISH
+
+      <Text position={[0, 7.9, 0.22]} fontSize={1.1} color="#f7b500" anchorX="center" anchorY="middle">
+        KOTESHWOR FINISH
       </Text>
-      <Text
-        position={[0, 7.1, -0.17]}
-        rotation={[0, Math.PI, 0]}
-        fontSize={0.95}
-        color="#ffffff"
-        anchorX="center"
-        anchorY="middle"
-      >
-        FINISH
+      <Text position={[0, 7.15, 0.22]} fontSize={0.55} color="#ffffff" anchorX="center" anchorY="middle">
+        कोटेश्वर - BAJAJ DASHAIN RACING
+      </Text>
+      <Text position={[0, 7.9, -0.22]} rotation={[0, Math.PI, 0]} fontSize={1.1} color="#f7b500" anchorX="center" anchorY="middle">
+        KOTESHWOR FINISH
       </Text>
     </group>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Atmosphere: sky, haze, sun, soft sky light + offline reflections    */
-/*  Usage: <Atmosphere followRef={bikeRef} />  (inside <Canvas shadows>) */
+/*  Atmosphere & Dynamic Lighting (Sun follows player bike)           */
 /* ------------------------------------------------------------------ */
 
-const SUN = [250, 180, 200]; // behind-right of the rider: bike + mountains are front-lit
+const SUN = [240, 200, -220]; // Autumn sun lighting the valley and mountains
 
 export function Atmosphere({ sun = SUN, followRef, shadowSize = 2048 }) {
   const light = useRef();
   const target = useMemo(() => new THREE.Object3D(), []);
-  const offset = useMemo(() => new THREE.Vector3(...sun).normalize().multiplyScalar(120), [sun]);
+  const offset = useMemo(() => new THREE.Vector3(...sun).normalize().multiplyScalar(130), [sun]);
   const sunDir = useMemo(() => new THREE.Vector3(...sun).normalize().multiplyScalar(30), [sun]);
 
   useLayoutEffect(() => {
     if (light.current) light.current.target = target;
   }, [target]);
 
-  // keep the shadow frustum centred on the bike
   useFrame(() => {
     const p = followRef?.current?.position;
     if (!p || !light.current) return;
@@ -839,32 +1161,31 @@ export function Atmosphere({ sun = SUN, followRef, shadowSize = 2048 }) {
 
   return (
     <>
-      <fog attach="fog" args={['#c9d9ea', 250, 2400]} />
-      <Sky distance={450000} sunPosition={sun} turbidity={4} rayleigh={1.2} mieCoefficient={0.005} mieDirectionalG={0.8} />
+      <fog attach="fog" args={['#d6e5f5', 280, 2800]} />
+      <Sky distance={450000} sunPosition={sun} turbidity={3.5} rayleigh={1.1} mieCoefficient={0.004} mieDirectionalG={0.82} />
 
-      {/* Generated in-scene (no HDR download): gives the bike paint/chrome something to reflect */}
       <Environment resolution={256} frames={1}>
-        <color attach="background" args={['#8fa9c4']} />
-        <Lightformer form="rect" intensity={1.4} color="#cfe4ff" position={[0, 20, 0]} scale={[60, 60, 1]} onUpdate={(s) => s.lookAt(0, 0, 0)} />
-        <Lightformer form="rect" intensity={6} color="#ffe6bf" position={[sunDir.x, sunDir.y, sunDir.z]} scale={[10, 10, 1]} onUpdate={(s) => s.lookAt(0, 0, 0)} />
-        <Lightformer form="rect" intensity={0.6} color="#4d6b45" position={[0, -10, 0]} scale={[60, 60, 1]} onUpdate={(s) => s.lookAt(0, 0, 0)} />
+        <color attach="background" args={['#96b5d8']} />
+        <Lightformer form="rect" intensity={1.5} color="#cfe5ff" position={[0, 25, 0]} scale={[70, 70, 1]} onUpdate={(s) => s.lookAt(0, 0, 0)} />
+        <Lightformer form="rect" intensity={6.5} color="#fff1d0" position={[sunDir.x, sunDir.y, sunDir.z]} scale={[12, 12, 1]} onUpdate={(s) => s.lookAt(0, 0, 0)} />
+        <Lightformer form="rect" intensity={0.6} color="#3d6138" position={[0, -10, 0]} scale={[70, 70, 1]} onUpdate={(s) => s.lookAt(0, 0, 0)} />
       </Environment>
 
-      <hemisphereLight args={['#cfe4ff', '#3b5a36', 0.35]} />
+      <hemisphereLight args={['#dcebfa', '#3e5c38', 0.45]} />
       <directionalLight
         ref={light}
         position={sun}
-        intensity={2.2}
-        color="#fff2dc"
+        intensity={2.4}
+        color="#fff4e0"
         castShadow
         shadow-mapSize={[shadowSize, shadowSize]}
         shadow-bias={-0.0004}
-        shadow-camera-left={-70}
-        shadow-camera-right={70}
-        shadow-camera-top={70}
-        shadow-camera-bottom={-70}
+        shadow-camera-left={-85}
+        shadow-camera-right={85}
+        shadow-camera-top={85}
+        shadow-camera-bottom={-85}
         shadow-camera-near={1}
-        shadow-camera-far={400}
+        shadow-camera-far={450}
       />
       <primitive object={target} />
     </>

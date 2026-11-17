@@ -17,6 +17,10 @@ const pool = new Pool({
   }
 });
 
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle pg client', err);
+});
+
 // Test the database connection
 pool.connect((err, client, release) => {
   if (err) {
