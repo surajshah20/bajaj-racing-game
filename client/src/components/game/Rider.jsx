@@ -1,11 +1,141 @@
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
+/* ------------------------------------------------------------------ */
+/*  Procedural Textures for Lifelike Racing Suit & Gear               */
+/* ------------------------------------------------------------------ */
+
+const texCache = {};
+
+function getCanvasTexture(key, width, height, draw) {
+  if (texCache[key]) return texCache[key];
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  draw(ctx, width, height);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  texCache[key] = tex;
+  return tex;
+}
+
+// 1. Carbon Fiber 2x2 Twill Weave Pattern
+function getCarbonFiberTexture() {
+  return getCanvasTexture('carbon_fiber', 64, 64, (ctx, w, h) => {
+    ctx.fillStyle = '#14161a';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#282b33';
+    const s = 16;
+    for (let y = 0; y < h; y += s) {
+      for (let x = 0; x < w; x += s) {
+        if ((x / s + y / s) % 2 === 0) {
+          ctx.fillRect(x, y, s, s);
+          ctx.fillStyle = '#3a3f4b';
+          ctx.fillRect(x + 2, y + 2, s - 4, s - 4);
+          ctx.fillStyle = '#282b33';
+        }
+      }
+    }
+  });
+}
+
+// 2. Kevlar Accordion Stretch Flex Zones
+function getAccordionTexture() {
+  return getCanvasTexture('accordion_kevlar', 32, 64, (ctx, w, h) => {
+    ctx.fillStyle = '#111215';
+    ctx.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 8) {
+      ctx.fillStyle = '#23252b';
+      ctx.fillRect(0, y, w, 4);
+      ctx.fillStyle = '#08080a';
+      ctx.fillRect(0, y + 4, w, 4);
+    }
+  });
+}
+
+// 3. Bajaj Racing Decal Texture for Chest & Speed Hump
+function getBajajRacingDecal() {
+  return getCanvasTexture('bajaj_decal', 256, 128, (ctx, w, h) => {
+    ctx.fillStyle = '#121316';
+    ctx.fillRect(0, 0, w, h);
+
+    // Diagonal speed slash
+    ctx.fillStyle = '#e31c25';
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    ctx.lineTo(w * 0.45, 0);
+    ctx.lineTo(w * 0.6, 0);
+    ctx.lineTo(w * 0.15, h);
+    ctx.closePath();
+    ctx.fill();
+
+    // "BAJAJ" Brand Name
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('BAJAJ', w * 0.52, 42);
+
+    // "PULSAR RACING" Sub-text
+    ctx.fillStyle = '#f7b500';
+    ctx.font = '900 18px sans-serif';
+    ctx.letterSpacing = '3px';
+    ctx.fillText('PULSAR RACING', w * 0.52, 84);
+
+    // Border trim
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(6, 6, w - 12, h - 12);
+  });
+}
+
+// 4. Nepal Flag Shoulder Badge
+function getNepalFlagBadge() {
+  return getCanvasTexture('nepal_badge', 128, 128, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#003893'; // Blue outer border
+    ctx.beginPath();
+    ctx.moveTo(14, 10);
+    ctx.lineTo(105, 52);
+    ctx.lineTo(44, 52);
+    ctx.lineTo(110, 116);
+    ctx.lineTo(14, 116);
+    ctx.closePath();
+    ctx.fill();
+
+    // Crimson inner triangles
+    ctx.fillStyle = '#dc143c';
+    ctx.beginPath();
+    ctx.moveTo(22, 22);
+    ctx.lineTo(92, 48);
+    ctx.lineTo(38, 48);
+    ctx.lineTo(96, 108);
+    ctx.lineTo(22, 108);
+    ctx.closePath();
+    ctx.fill();
+
+    // White Moon & Sun
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(42, 38, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(46, 82, 9, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
 /**
- * Realistic 3D Motorcycle Racer (Rider) with Professional Racing Leathers & Aerodynamic Helmet
- * Features realistic human anatomical proportions, aerodynamic speed hump, knee sliders,
- * dynamic body hang-off, and forward racing tuck posture.
+ * Realistic 3D Motorcycle Racer with:
+ * - MotoGP-Spec Sculpted Anatomy & Ergonomic Forward Tuck
+ * - Biomechanical Micro-Vibrations & Breathing Dynamics
+ * - High-Speed Aerodynamic Wind Flutter
+ * - Active Counter-Steering Arm Kinematics & Throttle Roll
+ * - Iridescent Mirrored Helmet Visor & Carbon-Fiber Armor Plates
  */
 export default function Rider({ bikeStateRef, accentColor = '#e31c25', ...groupProps }) {
   const spineGroup = useRef();
@@ -14,8 +144,17 @@ export default function Rider({ bikeStateRef, accentColor = '#e31c25', ...groupP
   const rightLegRef = useRef();
   const leftArmRef = useRef();
   const rightArmRef = useRef();
+  const rightHandRef = useRef();
+  const speedHumpRef = useRef();
 
-  useFrame((_, delta) => {
+  const textures = useMemo(() => ({
+    carbon: getCarbonFiberTexture(),
+    accordion: getAccordionTexture(),
+    bajajDecal: getBajajRacingDecal(),
+    nepalBadge: getNepalFlagBadge(),
+  }), []);
+
+  useFrame((state, delta) => {
     if (!spineGroup.current || !bikeStateRef?.current) return;
 
     const {
@@ -24,292 +163,345 @@ export default function Rider({ bikeStateRef, accentColor = '#e31c25', ...groupP
       isBraking = false,
       speedRatio = 0,
       isWheelie = false,
+      isAirborne = false,
     } = bikeStateRef.current;
 
-    // 1. Aerodynamic Tuck & Braking Sit-up (Forward pitch down over fuel tank)
-    let targetTuck = 0.32 + speedRatio * 0.16;
-    if (isAccelerating) targetTuck += 0.14; // Tight aero tuck under full throttle
-    if (isBraking) targetTuck = 0.12;      // Sit up tall to catch wind and brace arms
-    if (isWheelie) targetTuck = -0.16;     // Lean backward and pull handlebars up during wheelie!
+    // 1. BIOMECHANICAL MICRO-VIBRATION & IDLE BREATHING
+    const time = state.clock.elapsedTime;
+    const idleBreath = Math.sin(time * 2.8) * 0.012;
+    const rpmVibration = (Math.sin(time * 65.0) + Math.cos(time * 52.0)) * speedRatio * 0.006;
+    const windFlutter = speedRatio > 0.45 ? Math.sin(time * 32.0) * 0.016 * speedRatio : 0;
 
-    // 2. Lateral Body Shift (Hanging off the bike into the apex of the turn)
-    // Note: Rider is rotated Math.PI around Y, so signs invert for world space alignment
-    const targetBodyRoll = -lean * 0.72;
-    const targetBodyShiftX = -lean * 0.22;
+    // 2. DYNAMIC RACING POSTURE
+    // - Full throttle: deep aerodynamic tuck over the fuel tank
+    // - Braking: sit up into the air-stream to catch wind and brace arms
+    // - Wheelie: torso rocks back, center of gravity moves over rear wheel
+    let targetTuck = 0.32 + speedRatio * 0.18 + idleBreath;
+    if (isAccelerating) targetTuck += 0.12;
+    if (isBraking) targetTuck = 0.10;
+    if (isWheelie) targetTuck = -0.22;
+    if (isAirborne) targetTuck = 0.20;
+
+    // 3. APEX HANG-OFF & KINEMATICS
+    // Note: Rider group is rotated Math.PI around Y, so signs invert for correct world orientation
+    const targetBodyRoll = -lean * 0.75 + windFlutter;
+    const targetBodyShiftX = -lean * 0.24;
 
     spineGroup.current.rotation.x = THREE.MathUtils.lerp(spineGroup.current.rotation.x, targetTuck, delta * 12);
     spineGroup.current.rotation.z = THREE.MathUtils.lerp(spineGroup.current.rotation.z, targetBodyRoll, delta * 14);
     spineGroup.current.position.x = THREE.MathUtils.lerp(spineGroup.current.position.x, targetBodyShiftX, delta * 12);
+    spineGroup.current.position.y = 0.10 + rpmVibration;
 
-    // 3. Head Tracking (Rider looks up through the visor and spots the corner exit)
+    // 4. APEX EYE & VISOR TRACKING (Rider looks through curve toward the exit)
     if (headGroup.current) {
-      const targetHeadYaw = -lean * 0.55;
-      const targetHeadPitch = -targetTuck * 0.78;
+      const targetHeadYaw = -lean * 0.62 + (Math.sin(time * 22.0) * windFlutter * 0.5);
+      const targetHeadPitch = -targetTuck * 0.82 + (isAccelerating ? 0.08 : 0);
       headGroup.current.rotation.y = THREE.MathUtils.lerp(headGroup.current.rotation.y, targetHeadYaw, delta * 14);
       headGroup.current.rotation.x = THREE.MathUtils.lerp(headGroup.current.rotation.x, targetHeadPitch, delta * 12);
+      headGroup.current.rotation.z = THREE.MathUtils.lerp(headGroup.current.rotation.z, -lean * 0.18, delta * 12);
     }
 
-    // 4. Knee Out (Knee Slider tarmac skim)
+    // 5. COUNTER-STEERING ARM KINEMATICS & THROTTLE ROLL
+    if (leftArmRef.current && rightArmRef.current) {
+      const armPushPull = lean * 0.04;
+      leftArmRef.current.position.z = 0.08 - armPushPull;
+      rightArmRef.current.position.z = 0.08 + armPushPull;
+
+      if (rightHandRef.current) {
+        // Twist right wrist backward during throttle acceleration
+        const targetThrottleRoll = isAccelerating ? 0.38 : 0.05;
+        rightHandRef.current.rotation.x = THREE.MathUtils.lerp(rightHandRef.current.rotation.x, targetThrottleRoll, delta * 14);
+      }
+    }
+
+    // 6. KNEE SLIDERS / PUCKS TARMAC DRAG
     if (leftLegRef.current && rightLegRef.current) {
-      const leftKneeOut = lean > 0.05 ? lean * 0.6 : 0;
-      const rightKneeOut = lean < -0.05 ? -lean * 0.6 : 0;
-      leftLegRef.current.rotation.z = THREE.MathUtils.lerp(leftLegRef.current.rotation.z, -0.18 - leftKneeOut, delta * 12);
-      rightLegRef.current.rotation.z = THREE.MathUtils.lerp(rightLegRef.current.rotation.z, 0.18 + rightKneeOut, delta * 12);
+      const leftKneeKick = lean > 0.04 ? lean * 0.65 : 0;
+      const rightKneeKick = lean < -0.04 ? -lean * 0.65 : 0;
+      leftLegRef.current.rotation.z = THREE.MathUtils.lerp(leftLegRef.current.rotation.z, -0.18 - leftKneeKick, delta * 12);
+      rightLegRef.current.rotation.z = THREE.MathUtils.lerp(rightLegRef.current.rotation.z, 0.18 + rightKneeKick, delta * 12);
     }
   });
 
   return (
     <group {...groupProps}>
-      {/* LOWER BODY: Hips & Pelvis seated on the motorcycle saddle */}
+      {/* ============================================================ */}
+      {/* LOWER BODY: Hips, Saddle Seat, Legs & Microfiber Racing Boots*/}
+      {/* ============================================================ */}
       <group position={[0, 0, 0]}>
-        {/* Contoured Riding Pants Seat */}
-        <mesh position={[0, 0.05, -0.02]} castShadow receiveShadow>
-          <boxGeometry args={[0.32, 0.16, 0.30]} />
-          <meshStandardMaterial color="#141518" roughness={0.75} />
+        {/* Anatomical Hip & Seat Cushion */}
+        <mesh position={[0, 0.06, -0.03]} castShadow receiveShadow>
+          <boxGeometry args={[0.34, 0.16, 0.32]} />
+          <meshStandardMaterial color="#131417" roughness={0.8} />
         </mesh>
-        {/* Rear Saddle Pad & Tail Protection */}
-        <mesh position={[0, 0.12, -0.14]} rotation={[-0.4, 0, 0]} castShadow>
-          <boxGeometry args={[0.26, 0.10, 0.12]} />
-          <meshStandardMaterial color="#1a1b1f" roughness={0.65} />
+        {/* Kevlar Accordion Lower Back Flex Band */}
+        <mesh position={[0, 0.14, -0.15]} rotation={[-0.38, 0, 0]} castShadow>
+          <boxGeometry args={[0.26, 0.09, 0.08]} />
+          <meshStandardMaterial map={textures.accordion} roughness={0.9} />
         </mesh>
 
-        {/* LEFT LEG: Thigh, Knee Slider, Shin Guard & Racing Boot */}
+        {/* ---------------- LEFT LEG & BOOT ---------------- */}
         <group ref={leftLegRef} position={[-0.15, 0.02, 0.02]} rotation={[0.48, 0.08, -0.18]}>
-          {/* Upper Thigh hugging the fuel tank */}
+          {/* Thigh (gripping the fuel tank tightly) */}
           <mesh position={[0, -0.19, 0.14]} rotation={[-0.72, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.078, 0.068, 0.38, 12]} />
-            <meshStandardMaterial color="#18191c" roughness={0.65} />
+            <cylinderGeometry args={[0.082, 0.070, 0.38, 14]} />
+            <meshStandardMaterial color="#16171b" roughness={0.65} />
           </mesh>
-          {/* Accent Racing Stripe on Thigh */}
-          <mesh position={[-0.04, -0.19, 0.15]} rotation={[-0.72, 0, 0]}>
-            <boxGeometry args={[0.015, 0.32, 0.06]} />
-            <meshStandardMaterial color={accentColor} roughness={0.4} />
-          </mesh>
-
-          {/* Hard Dual-Compound Knee Slider (Puck) */}
-          <mesh position={[-0.075, -0.32, 0.30]} rotation={[0, -0.2, 0]} castShadow>
-            <boxGeometry args={[0.045, 0.09, 0.10]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.3} />
-          </mesh>
-          <mesh position={[-0.06, -0.32, 0.28]}>
-            <cylinderGeometry args={[0.06, 0.06, 0.07, 10]} />
-            <meshStandardMaterial color="#222327" roughness={0.8} />
+          {/* Accent Racing Leather Stripe on Thigh */}
+          <mesh position={[-0.045, -0.19, 0.15]} rotation={[-0.72, 0, 0]}>
+            <boxGeometry args={[0.018, 0.34, 0.065]} />
+            <meshStandardMaterial color={accentColor} roughness={0.35} />
           </mesh>
 
-          {/* Calf / Shin Guard with Accordion Flex Zone */}
+          {/* Hard Dual-Compound Knee Slider (Tarmac Scuff Puck) */}
+          <mesh position={[-0.078, -0.32, 0.30]} rotation={[0, -0.22, 0]} castShadow>
+            <boxGeometry args={[0.048, 0.095, 0.11]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.25} />
+          </mesh>
+          <mesh position={[-0.062, -0.32, 0.28]}>
+            <cylinderGeometry args={[0.062, 0.062, 0.075, 12]} />
+            <meshStandardMaterial map={textures.carbon} roughness={0.5} />
+          </mesh>
+
+          {/* Calf / Shin Guard with Kevlar Flex Accordion */}
           <mesh position={[0, -0.38, 0.11]} rotation={[0.68, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.064, 0.055, 0.34, 10]} />
-            <meshStandardMaterial color="#16171a" roughness={0.7} />
+            <cylinderGeometry args={[0.066, 0.056, 0.34, 12]} />
+            <meshStandardMaterial color="#141518" roughness={0.7} />
           </mesh>
 
-          {/* High-Top Microfiber Racing Boot on Footpeg */}
-          <mesh position={[0, -0.49, -0.04]} rotation={[0.08, 0, 0]} castShadow>
-            <boxGeometry args={[0.082, 0.095, 0.20]} />
-            <meshStandardMaterial color="#111215" roughness={0.4} />
+          {/* High-Top Microfiber Racing Boot */}
+          <mesh position={[0, -0.50, -0.04]} rotation={[0.08, 0, 0]} castShadow>
+            <boxGeometry args={[0.085, 0.098, 0.21]} />
+            <meshStandardMaterial color="#0f1012" roughness={0.4} />
           </mesh>
-          {/* Magnesium Toe Slider on outer boot */}
-          <mesh position={[-0.045, -0.52, 0.03]} rotation={[0, 0.2, 0]}>
-            <boxGeometry args={[0.02, 0.035, 0.08]} />
-            <meshStandardMaterial color="#d0d5dd" metalness={0.85} roughness={0.2} />
+          {/* Replaceable Magnesium Toe Slider on outer boot */}
+          <mesh position={[-0.048, -0.53, 0.03]} rotation={[0, 0.2, 0]}>
+            <boxGeometry args={[0.022, 0.038, 0.085]} />
+            <meshStandardMaterial color="#e5e9f0" metalness={0.92} roughness={0.15} />
           </mesh>
         </group>
 
-        {/* RIGHT LEG: Thigh, Knee Slider, Shin Guard & Racing Boot */}
+        {/* ---------------- RIGHT LEG & BOOT ---------------- */}
         <group ref={rightLegRef} position={[0.15, 0.02, 0.02]} rotation={[0.48, -0.08, 0.18]}>
-          {/* Upper Thigh hugging the fuel tank */}
+          {/* Thigh (gripping the fuel tank tightly) */}
           <mesh position={[0, -0.19, 0.14]} rotation={[-0.72, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.078, 0.068, 0.38, 12]} />
-            <meshStandardMaterial color="#18191c" roughness={0.65} />
+            <cylinderGeometry args={[0.082, 0.070, 0.38, 14]} />
+            <meshStandardMaterial color="#16171b" roughness={0.65} />
           </mesh>
-          {/* Accent Racing Stripe on Thigh */}
-          <mesh position={[0.04, -0.19, 0.15]} rotation={[-0.72, 0, 0]}>
-            <boxGeometry args={[0.015, 0.32, 0.06]} />
-            <meshStandardMaterial color={accentColor} roughness={0.4} />
-          </mesh>
-
-          {/* Hard Dual-Compound Knee Slider (Puck) */}
-          <mesh position={[0.075, -0.32, 0.30]} rotation={[0, 0.2, 0]} castShadow>
-            <boxGeometry args={[0.045, 0.09, 0.10]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.3} />
-          </mesh>
-          <mesh position={[0.06, -0.32, 0.28]}>
-            <cylinderGeometry args={[0.06, 0.06, 0.07, 10]} />
-            <meshStandardMaterial color="#222327" roughness={0.8} />
+          {/* Accent Racing Leather Stripe on Thigh */}
+          <mesh position={[0.045, -0.19, 0.15]} rotation={[-0.72, 0, 0]}>
+            <boxGeometry args={[0.018, 0.34, 0.065]} />
+            <meshStandardMaterial color={accentColor} roughness={0.35} />
           </mesh>
 
-          {/* Calf / Shin Guard with Accordion Flex Zone */}
+          {/* Hard Dual-Compound Knee Slider (Tarmac Scuff Puck) */}
+          <mesh position={[0.078, -0.32, 0.30]} rotation={[0, 0.22, 0]} castShadow>
+            <boxGeometry args={[0.048, 0.095, 0.11]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.25} />
+          </mesh>
+          <mesh position={[0.062, -0.32, 0.28]}>
+            <cylinderGeometry args={[0.062, 0.062, 0.075, 12]} />
+            <meshStandardMaterial map={textures.carbon} roughness={0.5} />
+          </mesh>
+
+          {/* Calf / Shin Guard with Kevlar Flex Accordion */}
           <mesh position={[0, -0.38, 0.11]} rotation={[0.68, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.064, 0.055, 0.34, 10]} />
-            <meshStandardMaterial color="#16171a" roughness={0.7} />
+            <cylinderGeometry args={[0.066, 0.056, 0.34, 12]} />
+            <meshStandardMaterial color="#141518" roughness={0.7} />
           </mesh>
 
-          {/* High-Top Microfiber Racing Boot on Footpeg */}
-          <mesh position={[0, -0.49, -0.04]} rotation={[0.08, 0, 0]} castShadow>
-            <boxGeometry args={[0.082, 0.095, 0.20]} />
-            <meshStandardMaterial color="#111215" roughness={0.4} />
+          {/* High-Top Microfiber Racing Boot */}
+          <mesh position={[0, -0.50, -0.04]} rotation={[0.08, 0, 0]} castShadow>
+            <boxGeometry args={[0.085, 0.098, 0.21]} />
+            <meshStandardMaterial color="#0f1012" roughness={0.4} />
           </mesh>
-          {/* Magnesium Toe Slider on outer boot */}
-          <mesh position={[0.045, -0.52, 0.03]} rotation={[0, -0.2, 0]}>
-            <boxGeometry args={[0.02, 0.035, 0.08]} />
-            <meshStandardMaterial color="#d0d5dd" metalness={0.85} roughness={0.2} />
+          {/* Replaceable Magnesium Toe Slider on outer boot */}
+          <mesh position={[0.048, -0.53, 0.03]} rotation={[0, -0.2, 0]}>
+            <boxGeometry args={[0.022, 0.038, 0.085]} />
+            <meshStandardMaterial color="#e5e9f0" metalness={0.92} roughness={0.15} />
           </mesh>
         </group>
       </group>
 
-      {/* UPPER BODY: Contoured Leather Torso, Aerodynamic Speed Hump, Arms & Helmet */}
+      {/* ============================================================ */}
+      {/* UPPER BODY: Contoured Torso, Aerodynamic Hump, Arms & Helmet */}
+      {/* ============================================================ */}
       <group ref={spineGroup} position={[0, 0.10, 0]}>
-        {/* Lower Torso / Lumbar */}
+        {/* Lumbar Waist with Ergonomic Leather Taper */}
         <mesh position={[0, 0.12, 0.02]} castShadow>
-          <cylinderGeometry args={[0.17, 0.15, 0.20, 14]} />
-          <meshStandardMaterial color="#18191d" roughness={0.65} />
+          <cylinderGeometry args={[0.18, 0.155, 0.20, 14]} />
+          <meshStandardMaterial color="#16171b" roughness={0.65} />
         </mesh>
 
         {/* Muscular Chest & Upper Torso */}
         <mesh position={[0, 0.28, 0.04]} castShadow>
-          <boxGeometry args={[0.38, 0.24, 0.26]} />
-          <meshStandardMaterial color="#16171b" roughness={0.6} />
+          <boxGeometry args={[0.39, 0.24, 0.27]} />
+          <meshStandardMaterial color="#141518" roughness={0.6} />
         </mesh>
 
-        {/* Racing Livery Accent Vest / Chest Inset */}
-        <mesh position={[0, 0.28, 0.175]}>
-          <boxGeometry args={[0.26, 0.22, 0.02]} />
-          <meshStandardMaterial color={accentColor} roughness={0.35} />
-        </mesh>
-        {/* Back Spine Protector Plate */}
-        <mesh position={[0, 0.28, -0.095]} castShadow>
-          <boxGeometry args={[0.18, 0.26, 0.02]} />
-          <meshStandardMaterial color="#0c0d0f" roughness={0.4} />
+        {/* Official BAJAJ Racing Chest Livery Emblem */}
+        <mesh position={[0, 0.29, 0.18]}>
+          <planeGeometry args={[0.26, 0.13]} />
+          <meshStandardMaterial map={textures.bajajDecal} roughness={0.4} />
         </mesh>
 
-        {/* Aerodynamic Speed Hump on Upper Back (MotoGP style) */}
-        <mesh position={[0, 0.36, -0.15]} rotation={[-0.42, 0, 0]} castShadow>
-          <boxGeometry args={[0.16, 0.22, 0.10]} />
-          <meshStandardMaterial color="#111214" roughness={0.35} />
-        </mesh>
-        <mesh position={[0, 0.44, -0.18]} rotation={[-0.55, 0, 0]} castShadow>
-          <boxGeometry args={[0.12, 0.12, 0.08]} />
-          <meshStandardMaterial color={accentColor} roughness={0.3} />
+        {/* Ergonomic Molded Spine Guard Backbone Plates */}
+        <mesh position={[0, 0.28, -0.10]} castShadow>
+          <boxGeometry args={[0.17, 0.28, 0.025]} />
+          <meshStandardMaterial map={textures.carbon} roughness={0.4} />
         </mesh>
 
-        {/* Ergonomic Molded Titanium Shoulder Armor Sliders */}
-        <mesh position={[-0.22, 0.36, 0.04]} rotation={[0, 0, 0.3]} castShadow>
-          <sphereGeometry args={[0.078, 12, 10]} />
-          <meshStandardMaterial color="#e0e4ec" metalness={0.88} roughness={0.18} />
+        {/* Aerodynamic Speed Hump on Upper Back (MotoGP Style) */}
+        <group ref={speedHumpRef} position={[0, 0.38, -0.16]}>
+          <mesh rotation={[-0.48, 0, 0]} castShadow>
+            <boxGeometry args={[0.17, 0.26, 0.12]} />
+            <meshStandardMaterial color="#101114" roughness={0.35} />
+          </mesh>
+          {/* Top Aerodynamic Air Foil on Hump */}
+          <mesh position={[0, 0.06, -0.04]} rotation={[-0.55, 0, 0]} castShadow>
+            <boxGeometry args={[0.13, 0.14, 0.09]} />
+            <meshStandardMaterial color={accentColor} roughness={0.3} />
+          </mesh>
+          {/* Bajaj Racing Badge on Upper Speed Hump */}
+          <mesh position={[0, 0.05, -0.09]} rotation={[-0.55, Math.PI, 0]}>
+            <planeGeometry args={[0.12, 0.06]} />
+            <meshStandardMaterial map={textures.bajajDecal} roughness={0.35} />
+          </mesh>
+        </group>
+
+        {/* Titanium Dual-Compound Shoulder Sliders */}
+        <mesh position={[-0.23, 0.36, 0.04]} rotation={[0, 0, 0.32]} castShadow>
+          <sphereGeometry args={[0.082, 14, 12]} />
+          <meshStandardMaterial color="#d8dde6" metalness={0.92} roughness={0.16} />
         </mesh>
-        <mesh position={[0.22, 0.36, 0.04]} rotation={[0, 0, -0.3]} castShadow>
-          <sphereGeometry args={[0.078, 12, 10]} />
-          <meshStandardMaterial color="#e0e4ec" metalness={0.88} roughness={0.18} />
+        <mesh position={[0.23, 0.36, 0.04]} rotation={[0, 0, -0.32]} castShadow>
+          <sphereGeometry args={[0.082, 14, 12]} />
+          <meshStandardMaterial color="#d8dde6" metalness={0.92} roughness={0.16} />
         </mesh>
 
-        {/* LEFT ARM: Bicep, Elbow Slider, Forearm & Gauntlet Glove on Handlebar */}
+        {/* Nepal National Flag Emblem on Right Shoulder */}
+        <mesh position={[0.21, 0.28, 0.04]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[0.09, 0.09]} />
+          <meshStandardMaterial map={textures.nepalBadge} transparent roughness={0.3} />
+        </mesh>
+
+        {/* ---------------- LEFT ARM & CLUTCH GLOVE ---------------- */}
         <group ref={leftArmRef} position={[-0.20, 0.34, 0.08]}>
-          {/* Upper Arm / Bicep */}
+          {/* Bicep / Upper Arm */}
           <mesh position={[-0.07, -0.11, 0.14]} rotation={[0.78, 0.18, -0.28]} castShadow>
-            <cylinderGeometry args={[0.058, 0.052, 0.30, 10]} />
+            <cylinderGeometry args={[0.059, 0.053, 0.30, 12]} />
             <meshStandardMaterial color={accentColor} roughness={0.5} />
           </mesh>
-          {/* Molded TPU Elbow Slider */}
+          {/* Carbon Fiber Elbow Slider with Spark Scuff Insert */}
           <mesh position={[-0.11, -0.22, 0.26]}>
-            <sphereGeometry args={[0.052, 8, 8]} />
-            <meshStandardMaterial color="#d0d5dd" metalness={0.8} roughness={0.25} />
+            <sphereGeometry args={[0.054, 10, 10]} />
+            <meshStandardMaterial map={textures.carbon} metalness={0.7} roughness={0.25} />
           </mesh>
-          {/* Forearm angled down toward clip-on */}
+          {/* Forearm Angled Forward Toward Handlebar */}
           <mesh position={[-0.10, -0.24, 0.38]} rotation={[0.42, 0.22, -0.12]} castShadow>
-            <cylinderGeometry args={[0.052, 0.046, 0.28, 10]} />
-            <meshStandardMaterial color="#1a1b1f" roughness={0.65} />
+            <cylinderGeometry args={[0.053, 0.047, 0.28, 12]} />
+            <meshStandardMaterial color="#16171b" roughness={0.65} />
           </mesh>
-          {/* Full-Gauntlet Racing Glove gripping the handlebar */}
+          {/* Full-Gauntlet Racing Glove with Carbon Knuckle Plate */}
           <mesh position={[-0.12, -0.32, 0.52]} rotation={[0.2, 0.15, 0]} castShadow>
-            <boxGeometry args={[0.075, 0.07, 0.11]} />
-            <meshStandardMaterial color="#111215" roughness={0.4} />
+            <boxGeometry args={[0.078, 0.072, 0.12]} />
+            <meshStandardMaterial color="#0e0f12" roughness={0.4} />
           </mesh>
-          {/* Carbon Fiber Knuckle Protector */}
-          <mesh position={[-0.12, -0.29, 0.53]}>
-            <boxGeometry args={[0.065, 0.02, 0.06]} />
-            <meshStandardMaterial color="#2b2d33" metalness={0.6} roughness={0.3} />
+          <mesh position={[-0.12, -0.288, 0.53]}>
+            <boxGeometry args={[0.068, 0.022, 0.065]} />
+            <meshStandardMaterial map={textures.carbon} metalness={0.8} roughness={0.2} />
           </mesh>
         </group>
 
-        {/* RIGHT ARM: Bicep, Elbow Slider, Forearm & Gauntlet Glove on Handlebar */}
+        {/* ---------------- RIGHT ARM & THROTTLE GLOVE ---------------- */}
         <group ref={rightArmRef} position={[0.20, 0.34, 0.08]}>
-          {/* Upper Arm / Bicep */}
+          {/* Bicep / Upper Arm */}
           <mesh position={[0.07, -0.11, 0.14]} rotation={[0.78, -0.18, 0.28]} castShadow>
-            <cylinderGeometry args={[0.058, 0.052, 0.30, 10]} />
+            <cylinderGeometry args={[0.059, 0.053, 0.30, 12]} />
             <meshStandardMaterial color={accentColor} roughness={0.5} />
           </mesh>
-          {/* Molded TPU Elbow Slider */}
+          {/* Carbon Fiber Elbow Slider with Spark Scuff Insert */}
           <mesh position={[0.11, -0.22, 0.26]}>
-            <sphereGeometry args={[0.052, 8, 8]} />
-            <meshStandardMaterial color="#d0d5dd" metalness={0.8} roughness={0.25} />
+            <sphereGeometry args={[0.054, 10, 10]} />
+            <meshStandardMaterial map={textures.carbon} metalness={0.7} roughness={0.25} />
           </mesh>
-          {/* Forearm angled down toward clip-on */}
+          {/* Forearm Angled Forward Toward Throttle Grip */}
           <mesh position={[0.10, -0.24, 0.38]} rotation={[0.42, -0.22, 0.12]} castShadow>
-            <cylinderGeometry args={[0.052, 0.046, 0.28, 10]} />
-            <meshStandardMaterial color="#1a1b1f" roughness={0.65} />
+            <cylinderGeometry args={[0.053, 0.047, 0.28, 12]} />
+            <meshStandardMaterial color="#16171b" roughness={0.65} />
           </mesh>
-          {/* Full-Gauntlet Racing Glove gripping the throttle */}
-          <mesh position={[0.12, -0.32, 0.52]} rotation={[0.2, -0.15, 0]} castShadow>
-            <boxGeometry args={[0.075, 0.07, 0.11]} />
-            <meshStandardMaterial color="#111215" roughness={0.4} />
-          </mesh>
-          {/* Carbon Fiber Knuckle Protector */}
-          <mesh position={[0.12, -0.29, 0.53]}>
-            <boxGeometry args={[0.065, 0.02, 0.06]} />
-            <meshStandardMaterial color="#2b2d33" metalness={0.6} roughness={0.3} />
-          </mesh>
+          {/* Dynamic Throttle Wrist (Rolls when accelerating) */}
+          <group ref={rightHandRef} position={[0.12, -0.32, 0.52]}>
+            <mesh rotation={[0.2, -0.15, 0]} castShadow>
+              <boxGeometry args={[0.078, 0.072, 0.12]} />
+              <meshStandardMaterial color="#0e0f12" roughness={0.4} />
+            </mesh>
+            <mesh position={[0, 0.032, 0.01]}>
+              <boxGeometry args={[0.068, 0.022, 0.065]} />
+              <meshStandardMaterial map={textures.carbon} metalness={0.8} roughness={0.2} />
+            </mesh>
+          </group>
         </group>
 
-        {/* NECK & AERODYNAMIC FULL-FACE RACING HELMET */}
+        {/* ---------------- AERODYNAMIC RACING HELMET & VISOR ---------------- */}
         <group ref={headGroup} position={[0, 0.46, 0.08]}>
-          {/* Padded Neck Roll & Collar Gasket */}
+          {/* Padded Flame-Retardant Neck Balaclava */}
           <mesh position={[0, -0.04, 0]} castShadow>
-            <cylinderGeometry args={[0.068, 0.082, 0.09, 12]} />
-            <meshStandardMaterial color="#141517" roughness={0.85} />
+            <cylinderGeometry args={[0.070, 0.085, 0.09, 14]} />
+            <meshStandardMaterial color="#121316" roughness={0.9} />
           </mesh>
 
-          {/* Main Aerodynamic Helmet Shell (Tapered Egg Form) */}
+          {/* Main Aerodynamic Helmet Shell (Teardrop Race Profile) */}
           <mesh position={[0, 0.11, 0.01]} castShadow>
-            <sphereGeometry args={[0.172, 24, 20]} />
-            <meshStandardMaterial color={accentColor} roughness={0.22} metalness={0.3} />
+            <sphereGeometry args={[0.176, 28, 24]} />
+            <meshStandardMaterial color={accentColor} roughness={0.18} metalness={0.35} />
           </mesh>
 
-          {/* Chin Bar Guard & Mouth Intake Vent */}
-          <mesh position={[0, 0.04, 0.14]} rotation={[0.22, 0, 0]} castShadow>
-            <boxGeometry args={[0.15, 0.10, 0.12]} />
-            <meshStandardMaterial color="#111215" roughness={0.35} />
+          {/* Chin Bar Guard with High-Flow Mouth Intake Mesh */}
+          <mesh position={[0, 0.04, 0.145]} rotation={[0.22, 0, 0]} castShadow>
+            <boxGeometry args={[0.155, 0.105, 0.12]} />
+            <meshStandardMaterial color="#101114" roughness={0.3} />
           </mesh>
-          <mesh position={[0, 0.03, 0.205]}>
-            <boxGeometry args={[0.06, 0.025, 0.01]} />
-            <meshStandardMaterial color="#333742" roughness={0.5} />
-          </mesh>
-
-          {/* Rear Aerodynamic Kamm-Tail Diffuser / Spoiler */}
-          <mesh position={[0, 0.16, -0.10]} rotation={[-0.45, 0, 0]} castShadow>
-            <boxGeometry args={[0.12, 0.05, 0.15]} />
-            <meshStandardMaterial color="#0b0c0e" roughness={0.2} metalness={0.4} />
+          <mesh position={[0, 0.03, 0.21]}>
+            <boxGeometry args={[0.065, 0.028, 0.01]} />
+            <meshStandardMaterial color="#2b2f38" metalness={0.6} roughness={0.4} />
           </mesh>
 
-          {/* Reflective Dark Smoke / Iridium Curved Visor Shield */}
-          <mesh position={[0, 0.12, 0.142]} rotation={[0.12, 0, 0]}>
-            <cylinderGeometry args={[0.152, 0.152, 0.085, 20, 1, false, -Math.PI * 0.38, Math.PI * 0.76]} />
+          {/* Top Brow Ram-Air Scoops */}
+          {[-0.045, 0.045].map((x) => (
+            <mesh key={`vent-${x}`} position={[x, 0.22, 0.10]} rotation={[-0.3, 0, 0]}>
+              <boxGeometry args={[0.026, 0.015, 0.06]} />
+              <meshStandardMaterial color="#0a0b0d" metalness={0.7} roughness={0.2} />
+            </mesh>
+          ))}
+
+          {/* Rear Aerodynamic Kamm-Tail Diffuser / Downforce Spoiler */}
+          <mesh position={[0, 0.165, -0.105]} rotation={[-0.45, 0, 0]} castShadow>
+            <boxGeometry args={[0.125, 0.052, 0.16]} />
+            <meshStandardMaterial color="#08090a" roughness={0.18} metalness={0.5} />
+          </mesh>
+
+          {/* Reflective Iridescent Gold / Deep Smoke Mirrored Visor */}
+          <mesh position={[0, 0.125, 0.144]} rotation={[0.12, 0, 0]}>
+            <cylinderGeometry args={[0.154, 0.154, 0.088, 24, 1, false, -Math.PI * 0.38, Math.PI * 0.76]} />
             <meshStandardMaterial
               color="#090d14"
-              emissive="#102542"
-              emissiveIntensity={0.35}
-              metalness={0.96}
-              roughness={0.06}
+              emissive="#1a2e40"
+              emissiveIntensity={0.45}
+              metalness={0.98}
+              roughness={0.04}
             />
           </mesh>
 
-          {/* Visor Pivot Mechanism Plates on Temples */}
-          <mesh position={[-0.165, 0.11, 0.04]} rotation={[0, Math.PI / 2, 0]}>
-            <cylinderGeometry args={[0.025, 0.025, 0.01, 10]} />
-            <meshStandardMaterial color="#1f232b" metalness={0.7} roughness={0.3} />
-          </mesh>
-          <mesh position={[0.165, 0.11, 0.04]} rotation={[0, Math.PI / 2, 0]}>
-            <cylinderGeometry args={[0.025, 0.025, 0.01, 10]} />
-            <meshStandardMaterial color="#1f232b" metalness={0.7} roughness={0.3} />
-          </mesh>
+          {/* Visor Side Pivot Ratchet Mechanisms */}
+          {[-0.168, 0.168].map((x) => (
+            <group key={`pivot-${x}`} position={[x, 0.115, 0.04]} rotation={[0, Math.PI / 2, 0]}>
+              <mesh>
+                <cylinderGeometry args={[0.026, 0.026, 0.012, 12]} />
+                <meshStandardMaterial map={textures.carbon} metalness={0.8} roughness={0.2} />
+              </mesh>
+            </group>
+          ))}
         </group>
       </group>
     </group>
