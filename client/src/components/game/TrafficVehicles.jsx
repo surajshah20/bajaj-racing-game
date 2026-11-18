@@ -35,7 +35,7 @@ export default function TrafficVehicles({ trafficRef }) {
       const norm = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
 
       veh.x = p.x + norm.x * veh.lane;
-      veh.y = p.y;
+      veh.y = p.y + 0.02;
       veh.z = p.z + norm.z * veh.lane;
       veh.rotY = Math.atan2(tg.x, tg.z);
 

@@ -8,7 +8,9 @@ import {
 } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { trackCurve } from '../../utils/trackPath';
 
-const GROUND_Y = -0.6;
+// Ground plane sits 1.2m BELOW the lowest track point (all track elevations y >= 0.0)
+// so the asphalt, kerbs, and bike wheels are ALWAYS 100% visible and NEVER clip into grass.
+const GROUND_Y = -1.2;
 
 /* ------------------------------------------------------------------ */
 /*  Helpers: seeded random + noise                                     */
@@ -729,11 +731,11 @@ function buildFlyoverPillars() {
 export function Track() {
   const geos = useMemo(
     () => ({
-      road: buildStrip(-10.0, 10.0, -0.01, 28, 900),
-      kerbL: buildStrip(-11.2, -10.0, -0.02, 4, 900),
-      kerbR: buildStrip(10.0, 11.2, -0.02, 4, 900),
-      shoulderL: buildStrip(-15.0, -11.2, -0.04, 5, 900),
-      shoulderR: buildStrip(11.2, 15.0, -0.04, 5, 900),
+      road: buildStrip(-10.0, 10.0, 0.02, 28, 1200),
+      kerbL: buildStrip(-11.4, -10.0, 0.01, 4, 1200),
+      kerbR: buildStrip(10.0, 11.4, 0.01, 4, 1200),
+      shoulderL: buildStrip(-15.5, -11.4, -0.02, 5, 1200),
+      shoulderR: buildStrip(11.4, 15.5, -0.02, 5, 1200),
     }),
     []
   );
@@ -752,9 +754,9 @@ export function Track() {
 
   return (
     <group>
-      {/* Kathmandu Valley Ground */}
+      {/* Kathmandu Valley Ground - always 1.2m below road so asphalt never sinks */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, GROUND_Y, 0]} receiveShadow>
-        <planeGeometry args={[5000, 5000]} />
+        <planeGeometry args={[6000, 6000]} />
         <meshStandardMaterial map={maps.grass} roughness={1} />
       </mesh>
 

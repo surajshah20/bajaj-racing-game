@@ -263,7 +263,7 @@ export function RaceHUD({
       <div
         style={{
           position: 'absolute',
-          bottom: '20px',
+          bottom: showTouchControls ? '88px' : '20px',
           left: '50%',
           transform: 'translateX(-50%)',
           textAlign: 'center',
@@ -276,6 +276,7 @@ export function RaceHUD({
           minWidth: '135px',
           pointerEvents: 'none',
           zIndex: 14,
+          transition: 'bottom 0.25s ease-out',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center' }}>

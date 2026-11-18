@@ -13,7 +13,7 @@ export const STATIC_MEGA_RAMPS = MEGA_RAMP_T_LOCATIONS.map((t, idx) => {
 
   const rampPos = new THREE.Vector3(
     p.x + norm.x * offset,
-    p.y,
+    p.y + 0.02,
     p.z + norm.z * offset
   );
 

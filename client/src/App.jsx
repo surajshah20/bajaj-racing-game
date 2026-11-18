@@ -37,7 +37,7 @@ const STATIC_OBSTACLES = Array.from({ length: 45 }).map((_, i) => {
   const offset = lanes[Math.floor(r * lanes.length)];
   return {
     x: point.x + normal.x * offset,
-    y: point.y,
+    y: point.y + 0.02,
     z: point.z + normal.z * offset,
     t,
     rotation: Math.atan2(tangent.x, tangent.z),
@@ -52,7 +52,7 @@ const STATIC_NITRO_PADS = Array.from({ length: 22 }).map((_, i) => {
   const offset = i % 2 === 0 ? 3.5 : -3.5;
   return {
     x: point.x + normal.x * offset,
-    y: point.y,
+    y: point.y + 0.02,
     z: point.z + normal.z * offset,
     rotation: Math.atan2(tangent.x, tangent.z),
   };
@@ -66,7 +66,7 @@ const STATIC_COLLECTIBLES = Array.from({ length: 60 }).map((_, i) => {
   const offset = Math.sin(i * 0.8) * 6.5;
   return {
     x: point.x + normal.x * offset,
-    y: point.y,
+    y: point.y + 0.02,
     z: point.z + normal.z * offset,
     collected: false,
     rotation: Math.atan2(tangent.x, tangent.z),
