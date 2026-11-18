@@ -5,12 +5,31 @@ import * as THREE from 'three';
 const MAX_SPARKS = 45;
 const MAX_SKID_PUFFS = 30;
 
+// Soft feathered radial gradient neon underglow texture (no harsh rectangle edges)
+function getUnderglowTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+  grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.65)');
+  grad.addColorStop(0.65, 'rgba(255, 255, 255, 0.20)');
+  grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(canvas);
+  return tex;
+}
+
 export default function BikeVFX({ bikeRef, bikeStateRef, accentColor = '#00e5ff' }) {
   const underglowRef = useRef();
   const sparksRef = useRef();
   const skidPuffsRef = useRef();
   const rimFrontRef = useRef();
   const rimRearRef = useRef();
+
+  const glowTex = useMemo(() => getUnderglowTexture(), []);
 
   // Procedural sparks pool
   const sparks = useMemo(() => {
@@ -159,15 +178,15 @@ export default function BikeVFX({ bikeRef, bikeStateRef, accentColor = '#00e5ff'
 
   return (
     <group>
-      {/* 1. NEON UNDERGLOW CHASSIS POOL */}
-      <mesh ref={underglowRef} position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[1.6, 3.2]} />
-        <meshStandardMaterial
+      {/* 1. SOFT FEATHERED NEON UNDERGLOW POOL */}
+      <mesh ref={underglowRef} position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[2.0, 3.6]} />
+        <meshBasicMaterial
+          map={glowTex}
           color={accentColor}
-          emissive={accentColor}
-          emissiveIntensity={3.5}
           transparent
-          opacity={0.65}
+          opacity={0.42}
+          depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
       </mesh>

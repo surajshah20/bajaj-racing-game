@@ -630,12 +630,12 @@ export default function PlayerBike({
       {/* 3D Bajaj Motorcycle Model */}
       <primitive object={scene} scale={2.0} rotation={[0, Math.PI, 0]} />
 
-      {/* 3D Realistic Racer Character */}
+      {/* 3D Realistic Racer Character firmly seated on motorcycle saddle */}
       <Rider
         bikeStateRef={bikeStateRef}
         accentColor={selectedBike.color}
-        scale={2.0}
-        position={[0, 1.64, 0.36]}
+        scale={1.75}
+        position={[0, 1.10, 0.14]}
         rotation={[0, Math.PI, 0]}
       />
 
