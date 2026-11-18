@@ -202,21 +202,34 @@ export default function PlayerBike({
     const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
 
     // 3. STEERING & LATERAL INERTIA
+    // normal = left-of-travel direction: (-tangent.z, 0, tangent.x)
+    // Positive lateralOffset means: position += normal * offset  → moves LEFT of travel
+    // So to steer RIGHT  we need NEGATIVE lateralVelocity (pulls against normal).
+    // We FLIP the input so right key → negative steer → offset decreases → bike moves right.
     let steerInput = 0;
-    if (inputState.left) steerInput -= 1;
-    if (inputState.right) steerInput += 1;
+    if (inputState.left)  steerInput += 1;   // positive → along normal → LEFT  ✓
+    if (inputState.right) steerInput -= 1;   // negative → against normal → RIGHT ✓
 
     const agilityMultiplier = (selectedBike.handling || 88) / 88;
-    const steerForce = (38 * agilityMultiplier) * Math.max(0.3, 1.0 - speedRatio * 0.35);
-    const lateralDrag = 8.0;
+    const steerForce = (32 * agilityMultiplier) * Math.max(0.25, 1.0 - speedRatio * 0.4);
+    // Stronger lateral drag so the bike stays on-road and doesn't drift endlessly
+    const lateralDrag = 14.0;
+    // Auto-centre force when no steering input (prevents phantom drift on curves)
+    const centrePull = inputState.left || inputState.right ? 0 : 6.0;
 
-    lateralVelocity.current += (steerInput * steerForce - lateralVelocity.current * lateralDrag) * delta;
+    lateralVelocity.current +=
+      (steerInput * steerForce
+        - lateralVelocity.current * lateralDrag
+        - lateralOffset.current * centrePull) * delta;
+
     lateralOffset.current += lateralVelocity.current * delta;
-    lateralOffset.current = THREE.MathUtils.clamp(lateralOffset.current, -8.2, 8.2);
+    // Hard clamp to road half-width (road is ±10 units wide, keep ±7.5 for playability)
+    lateralOffset.current = THREE.MathUtils.clamp(lateralOffset.current, -7.5, 7.5);
 
-    // 4. MOTORCYCLE ROLL (LEAN)
-    const maxLean = 0.52; // ~30 degrees
-    const targetLean = (lateralVelocity.current / 7.5) * maxLean;
+    // 4. MOTORCYCLE ROLL (LEAN) — lean INTO the steering direction
+    const maxLean = 0.48; // ~27 degrees
+    // lateralVelocity positive = moving left → lean left (negative Z rotation in world) → negate
+    const targetLean = -(lateralVelocity.current / 6.0) * maxLean;
     currentLean.current = THREE.MathUtils.lerp(currentLean.current, targetLean, delta * 14);
 
     // 5. WHEELIE MECHANIC (Space / Shift / Wheelie button)

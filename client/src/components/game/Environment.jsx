@@ -804,6 +804,172 @@ export function Track() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Traditional Nepali Houses (ढलान छाना शैली — Kathmandu Tole)       */
+/* ------------------------------------------------------------------ */
+
+// Prayer flag colours: saffron, white, red, green, blue
+const PRAYER_FLAG_COLORS = ['#ff8c00', '#ffffff', '#cc1111', '#228b22', '#1a4fa0'];
+
+function PrayerFlags({ position }) {
+  return (
+    <group position={position}>
+      {PRAYER_FLAG_COLORS.map((col, i) => (
+        <mesh key={i} position={[i * 0.55 - 1.1, 0, 0]} rotation={[0, 0, 0.12]}>
+          <planeGeometry args={[0.45, 0.32]} />
+          <meshStandardMaterial color={col} roughness={0.9} side={THREE.DoubleSide} transparent opacity={0.88} />
+        </mesh>
+      ))}
+      {/* Rope */}
+      <mesh position={[0, 0.18, 0]} rotation={[0, 0, 0]}>
+        <cylinderGeometry args={[0.012, 0.012, 3.0, 4]} />
+        <meshStandardMaterial color="#c8b88a" roughness={1} />
+      </mesh>
+    </group>
+  );
+}
+
+function NepaliHouse({ position, rotation, floors = 2, width = 5.5, variant = 0 }) {
+  const height = floors * 2.9;
+  const roofH = 1.9 + variant * 0.3;
+  // Colour palette: aged terracotta brick with slight variety
+  const brickColors = ['#c47c5a', '#b8694a', '#c98060', '#bf7555'];
+  const brickCol = brickColors[variant % brickColors.length];
+  const roofCol = '#6e1c00';
+  const woodCol = '#3a1f07';
+  const trimCol = '#e8d5b0'; // cream plaster trim
+
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Main Brick Body */}
+      <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[width, height, 4.8]} />
+        <meshStandardMaterial color={brickCol} roughness={0.92} />
+      </mesh>
+
+      {/* White plaster band between floors */}
+      {floors > 1 && (
+        <mesh position={[0, height / 2 - 0.08, 0]}>
+          <boxGeometry args={[width + 0.06, 0.22, 4.86]} />
+          <meshStandardMaterial color={trimCol} roughness={0.85} />
+        </mesh>
+      )}
+
+      {/* Terracotta Gable Roof (4-sided hipped) */}
+      <mesh position={[0, height + roofH * 0.5, 0]} castShadow>
+        <coneGeometry args={[width * 0.68, roofH * 1.1, 4]} />
+        <meshStandardMaterial color={roofCol} roughness={0.88} />
+      </mesh>
+      {/* Roof overhang lip */}
+      <mesh position={[0, height + 0.06, 0]}>
+        <boxGeometry args={[width + 1.0, 0.18, 5.8]} />
+        <meshStandardMaterial color={roofCol} roughness={0.9} />
+      </mesh>
+
+      {/* Wooden Windows (upper floor) */}
+      {[-1.5, 0, 1.5].map((wx) => (
+        <group key={`wu-${wx}`} position={[wx, height * 0.72, 2.45]}>
+          <mesh>
+            <boxGeometry args={[0.75, 1.0, 0.1]} />
+            <meshStandardMaterial color={woodCol} roughness={0.75} />
+          </mesh>
+          {/* Window frame divider */}
+          <mesh position={[0, 0, 0.06]}>
+            <boxGeometry args={[0.08, 0.95, 0.06]} />
+            <meshStandardMaterial color="#6b3c14" roughness={0.7} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Ground Floor Shopfront Recess / Door */}
+      <mesh position={[0, 0.9, 2.46]}>
+        <boxGeometry args={[1.0, 1.8, 0.08]} />
+        <meshStandardMaterial color={woodCol} roughness={0.7} />
+      </mesh>
+      {/* Side shop windows ground floor */}
+      {[-1.5, 1.5].map((wx) => (
+        <mesh key={`wl-${wx}`} position={[wx, 0.75, 2.46]}>
+          <boxGeometry args={[0.8, 0.9, 0.08]} />
+          <meshStandardMaterial color={woodCol} roughness={0.7} />
+        </mesh>
+      ))}
+
+      {/* Carved wooden roof bracket decoration */}
+      {[-width / 2 + 0.4, 0, width / 2 - 0.4].map((bx) => (
+        <mesh key={`br-${bx}`} position={[bx, height - 0.12, 2.56]} castShadow>
+          <boxGeometry args={[0.35, 0.28, 0.22]} />
+          <meshStandardMaterial color="#2e1206" roughness={0.8} />
+        </mesh>
+      ))}
+
+      {/* Prayer flags strung from roof */}
+      <PrayerFlags position={[0, height + roofH + 0.05, 0]} />
+    </group>
+  );
+}
+
+// Scatter 32 houses along the track in clusters, keeping clear of mega-ramp zones
+const RAMP_T_ZONES = [0.08, 0.22, 0.38, 0.58, 0.68, 0.75, 0.84, 0.94];
+function isTooCloseToRamp(t) {
+  return RAMP_T_ZONES.some((rt) => Math.abs(t - rt) < 0.04);
+}
+
+function NepaliHouses() {
+  const houses = useMemo(() => {
+    const rnd = mulberry32(777);
+    const list = [];
+    // Place houses from t=0.0 to t=0.65 (before city skyscrapers take over)
+    // and also t=0.80 to 0.87 (Chabahil suburban zone)
+    const zones = [
+      { start: 0.03, end: 0.60, count: 22 },
+      { start: 0.80, end: 0.87, count: 8 },
+    ];
+
+    zones.forEach((zone) => {
+      for (let i = 0; i < zone.count; i++) {
+        const rawT = zone.start + (i / zone.count) * (zone.end - zone.start);
+        if (isTooCloseToRamp(rawT)) continue;
+        const t = rawT;
+        const p = trackCurve.getPointAt(t);
+        const tg = trackCurve.getTangentAt(t);
+        const norm = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
+        const side = i % 2 === 0 ? 1 : -1;
+        // Keep 18-32m from road centre so they're visible but not obstructing
+        const dist = 18 + rnd() * 14;
+        const floors = rnd() > 0.4 ? (rnd() > 0.5 ? 3 : 2) : 2;
+        const width = 4.5 + rnd() * 2.5;
+        const variant = Math.floor(rnd() * 4);
+        const rotY = Math.atan2(tg.x, tg.z) + (side > 0 ? 0 : Math.PI) + (rnd() - 0.5) * 0.25;
+        list.push({
+          x: p.x + norm.x * dist * side,
+          y: p.y,
+          z: p.z + norm.z * dist * side,
+          rotY,
+          floors,
+          width,
+          variant,
+        });
+      }
+    });
+    return list;
+  }, []);
+
+  return (
+    <group>
+      {houses.map((h, idx) => (
+        <NepaliHouse
+          key={`nh-${idx}`}
+          position={[h.x, h.y, h.z]}
+          rotation={[0, h.rotY, 0]}
+          floors={h.floors}
+          width={h.width}
+          variant={h.variant}
+        />
+      ))}
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Solar Highway Streetlights along Outer Road Shoulders             */
 /* ------------------------------------------------------------------ */
 
@@ -982,6 +1148,7 @@ export function EnvironmentDecorations() {
       <KalankiUnderpass />
       <SwayambhuStupa />
       <DashainKites />
+      <NepaliHouses />
       <RoadsideStreetlights count={70} />
       <RobloxCityBuildings />
 
