@@ -18,12 +18,19 @@ export default function Rider({ bikeStateRef, accentColor = '#e31c25', ...groupP
   useFrame((_, delta) => {
     if (!spineGroup.current || !bikeStateRef?.current) return;
 
-    const { lean = 0, isAccelerating = false, isBraking = false, speedRatio = 0 } = bikeStateRef.current;
+    const {
+      lean = 0,
+      isAccelerating = false,
+      isBraking = false,
+      speedRatio = 0,
+      isWheelie = false,
+    } = bikeStateRef.current;
 
     // 1. Aerodynamic Tuck & Braking Sit-up (Forward pitch down over fuel tank)
     let targetTuck = 0.32 + speedRatio * 0.16;
     if (isAccelerating) targetTuck += 0.14; // Tight aero tuck under full throttle
     if (isBraking) targetTuck = 0.12;      // Sit up tall to catch wind and brace arms
+    if (isWheelie) targetTuck = -0.16;     // Lean backward and pull handlebars up during wheelie!
 
     // 2. Lateral Body Shift (Hanging off the bike into the apex of the turn)
     // Note: Rider is rotated Math.PI around Y, so signs invert for world space alignment

@@ -47,6 +47,17 @@ A high-performance 3D browser arcade racing game built with **React 19, Three.js
 - Dual-oscillator engine buzz (sawtooth + triangle) with gear-ratio pitch sweeps and lowpass muffler filters.
 - Procedural white-noise crash crunch, harmonic coin chime, and turbine nitro whoosh.
 
+### 🏍️ Roblox-Style Arcade Physics & Stunt System
+- **Vertical Airtime & Stunt Mega-Ramps:** 8 high-angle launch ramps that catapult the motorcycle high above traffic into mid-air with true gravity arc, suspension landing bounce, and floating **Neon Golden Rings (+1,000 pts)**!
+- **Wheelie & Stoppie System:** Hold `Space` or `Shift` (or mobile 🚀 button) to pop the front wheel into the air, balance on the rear tire, scrape footpegs with bouncing asphalt spark fountains, and build continuous trick combos.
+- **Dynamic Moving Kathmandu Traffic:** 14 moving city buses (*Sajha Yatayat*), white HiAce microbuses, and red/yellow taxis traveling along the 8 lanes to weave between.
+- **Slipstream Turbo Drafting:** Draft within 12 meters directly behind traffic vehicles to catch their wind tunnel and trigger an explosive **+22 km/h Slipstream Boost**.
+- **Nepali Musical Highway Horn:** Dedicated `H` key / 📢 touch button to blast authentic dual-tone musical fanfare horns that alert nearby highway traffic.
+- **High-Octane Anime Speed Lines:** 2D radial wind streaks that whip past the screen at high speeds (>75 km/h) and during Nitro bursts.
+- **Bike VFX Suite:** Emissive neon chassis underglow, glowing wheel rim rings, puffy white tire skid smoke on hard braking, and asphalt scraping sparks.
+- **Floating Roblox Stunt Combo HUD:** Bouncy animated combo banners (`🦅 SICK AIRTIME!`, `🔥 MEGA WHEELIE!`, `🎯 NEON RING!`, `💨 SLIPSTREAM!`) with combo multipliers (`x2` to `x5`).
+- **Podium Stunt Recap:** Detailed end-of-race breakdown tracking Top Speed, Total Airtime seconds, Longest Wheelie, Neon Rings, and Near Misses.
+
 ---
 
 ## 🎮 Controls
@@ -54,9 +65,11 @@ A high-performance 3D browser arcade racing game built with **React 19, Three.js
 | Action | Keyboard | Touch / Mobile |
 | :--- | :--- | :--- |
 | **Accelerate** | `W` or `↑` (Up Arrow) | Hold **GAS** button |
-| **Brake / Reverse** | `S`, `↓`, or `Space` | Hold **BRK** button |
+| **Brake / Reverse** | `S` or `↓` (Down Arrow) | Hold **BRK** button |
 | **Steer Left** | `A` or `←` (Left Arrow) | Tap **◀** button |
 | **Steer Right** | `D` or `→` (Right Arrow) | Tap **▶** button |
+| **Pop Wheelie** | `Space` or `Shift` | Hold **🚀 WHEEL** button |
+| **Nepali Horn** | `H` key | Tap **📢** Horn button |
 | **Switch Camera Angle** | `C` key | Tap **🎥 [Camera]** in HUD |
 | **Pause / Resume** | `Esc` or Pause button | Tap **⏸️** in HUD |
 

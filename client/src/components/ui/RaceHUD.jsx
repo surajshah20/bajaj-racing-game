@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { trackCurve, RING_ROAD_CHECKPOINTS, getNearestCheckpoint } from '../../utils/trackPath';
+import StuntFeed from './StuntFeed';
 
 /**
  * Kathmandu Ring Road Race HUD
@@ -18,6 +19,8 @@ export function RaceHUD({
   setGameState,
   showTouchControls = false,
   setShowTouchControls,
+  currentStunt,
+  comboMultiplier = 1,
 }) {
   const progressRatio = (progress / 100) % 1.0;
   const currentCheckpoint = getNearestCheckpoint(progressRatio);
@@ -166,8 +169,11 @@ export function RaceHUD({
         </div>
       </div>
 
+      {/* ROBLOX FLOATING ARCADE STUNT COMBO FEED */}
+      <StuntFeed currentStunt={currentStunt} comboMultiplier={comboMultiplier} />
+
       {/* FLOATING NEAR-MISS BONUS BADGE */}
-      {nearMissActive && (
+      {nearMissActive && !currentStunt && (
         <div
           style={{
             position: 'absolute',
