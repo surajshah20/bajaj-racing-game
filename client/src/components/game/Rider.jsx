@@ -461,64 +461,68 @@ export default function Rider({ bikeStateRef, accentColor = '#e31c25', ...groupP
 
         {/* ---------------- AERODYNAMIC RACING HELMET & VISOR ---------------- */}
         <group ref={headGroup} position={[0, 0.42, 0.06]}>
-          {/* Padded Flame-Retardant Neck Balaclava */}
-          <mesh position={[0, -0.04, 0]} castShadow>
-            <cylinderGeometry args={[0.064, 0.078, 0.08, 12]} />
+          {/* Neck / Balaclava */}
+          <mesh position={[0, -0.05, 0]} castShadow>
+            <cylinderGeometry args={[0.058, 0.070, 0.09, 12]} />
             <meshStandardMaterial color="#111215" roughness={0.9} />
           </mesh>
 
-          {/* Main Aerodynamic Helmet Shell (Teardrop Race Profile with Graphic Stripes) */}
-          <mesh position={[0, 0.10, 0.01]} castShadow>
-            <sphereGeometry args={[0.162, 24, 20]} />
-            <meshStandardMaterial
-              map={textures.helmetGraphic}
-              color={accentColor}
-              roughness={0.22}
-              metalness={0.3}
-            />
-          </mesh>
+          {/* Main Helmet Shell — slightly oval (taller than wide) for human head shape */}
+          {/* Using a scaled group to squash the sphere into an oval */}
+          <group position={[0, 0.095, 0.0]} scale={[1.0, 1.18, 1.05]}>
+            <mesh castShadow>
+              <sphereGeometry args={[0.136, 24, 20]} />
+              <meshStandardMaterial
+                map={textures.helmetGraphic}
+                color={accentColor}
+                roughness={0.20}
+                metalness={0.28}
+              />
+            </mesh>
+          </group>
 
-          {/* Chin Bar Guard with High-Flow Mouth Intake Mesh */}
-          <mesh position={[0, 0.035, 0.135]} rotation={[0.22, 0, 0]} castShadow>
-            <boxGeometry args={[0.145, 0.098, 0.11]} />
-            <meshStandardMaterial color="#101114" roughness={0.3} />
+          {/* Chin Bar — full-face guard protects lower half of face */}
+          <mesh position={[0, 0.022, 0.118]} rotation={[0.28, 0, 0]} castShadow>
+            <boxGeometry args={[0.136, 0.085, 0.108]} />
+            <meshStandardMaterial color="#0d0e10" roughness={0.3} />
           </mesh>
-          <mesh position={[0, 0.026, 0.195]}>
-            <boxGeometry args={[0.060, 0.025, 0.01]} />
+          {/* Chin intake mesh strip */}
+          <mesh position={[0, 0.016, 0.168]}>
+            <boxGeometry args={[0.055, 0.020, 0.010]} />
             <meshStandardMaterial color="#2b2f38" metalness={0.6} roughness={0.4} />
           </mesh>
 
-          {/* Top Brow Ram-Air Scoops */}
-          {[-0.042, 0.042].map((x) => (
-            <mesh key={`vent-${x}`} position={[x, 0.20, 0.09]} rotation={[-0.3, 0, 0]}>
-              <boxGeometry args={[0.024, 0.014, 0.055]} />
+          {/* Deep Smoke Mirrored Visor — angled for aero look */}
+          <mesh position={[0, 0.096, 0.118]} rotation={[0.14, 0, 0]}>
+            <cylinderGeometry args={[0.122, 0.122, 0.070, 22, 1, false, -Math.PI * 0.38, Math.PI * 0.76]} />
+            <meshStandardMaterial
+              color="#070b12"
+              emissive="#0d1a28"
+              emissiveIntensity={0.4}
+              metalness={0.96}
+              roughness={0.04}
+            />
+          </mesh>
+
+          {/* Top Ram-Air Scoops */}
+          {[-0.038, 0.038].map((x) => (
+            <mesh key={`vent-${x}`} position={[x, 0.178, 0.078]} rotation={[-0.28, 0, 0]}>
+              <boxGeometry args={[0.020, 0.012, 0.048]} />
               <meshStandardMaterial color="#0a0b0d" metalness={0.7} roughness={0.2} />
             </mesh>
           ))}
 
-          {/* Rear Aerodynamic Kamm-Tail Diffuser / Downforce Spoiler */}
-          <mesh position={[0, 0.145, -0.10]} rotation={[-0.42, 0, 0]} castShadow>
-            <boxGeometry args={[0.115, 0.046, 0.14]} />
+          {/* Rear Kamm-Tail Spoiler */}
+          <mesh position={[0, 0.138, -0.088]} rotation={[-0.40, 0, 0]} castShadow>
+            <boxGeometry args={[0.102, 0.038, 0.118]} />
             <meshStandardMaterial color="#08090a" roughness={0.2} metalness={0.4} />
           </mesh>
 
-          {/* Reflective Iridescent Deep Smoke Mirrored Visor */}
-          <mesh position={[0, 0.115, 0.132]} rotation={[0.12, 0, 0]}>
-            <cylinderGeometry args={[0.142, 0.142, 0.082, 22, 1, false, -Math.PI * 0.38, Math.PI * 0.76]} />
-            <meshStandardMaterial
-              color="#090d14"
-              emissive="#122030"
-              emissiveIntensity={0.35}
-              metalness={0.96}
-              roughness={0.05}
-            />
-          </mesh>
-
-          {/* Visor Side Pivot Ratchet Mechanisms */}
-          {[-0.154, 0.154].map((x) => (
-            <group key={`pivot-${x}`} position={[x, 0.105, 0.038]} rotation={[0, Math.PI / 2, 0]}>
+          {/* Visor Side Pivot Ratchets */}
+          {[-0.138, 0.138].map((x) => (
+            <group key={`pivot-${x}`} position={[x, 0.090, 0.028]} rotation={[0, Math.PI / 2, 0]}>
               <mesh>
-                <cylinderGeometry args={[0.024, 0.024, 0.010, 10]} />
+                <cylinderGeometry args={[0.020, 0.020, 0.009, 10]} />
                 <meshStandardMaterial map={textures.carbon} metalness={0.8} roughness={0.2} />
               </mesh>
             </group>

@@ -11,7 +11,7 @@ export const BAJAJ_BIKES = [
     accentColor: '#ffffff',
     topSpeed: 48,       // ~120 km/h base
     nitroTopSpeed: 68,  // ~162 km/h boosted
-    accel: 38,
+    accel: 11,          // Realistic gear-ramped acceleration
     handling: 88,
     stats: { speed: 92, accel: 86, handling: 88 },
     description: 'Legendary half-faired aerodynamics, brutal mid-range power, and effortless highway cruising across Kathmandu Ring Road.',
@@ -26,7 +26,7 @@ export const BAJAJ_BIKES = [
     accentColor: '#f7b500',
     topSpeed: 46,       // ~115 km/h base
     nitroTopSpeed: 65,  // ~156 km/h boosted
-    accel: 42,          // Snappier initial acceleration
+    accel: 13,          // Snappier but still realistic
     handling: 98,       // Razor-sharp cornering
     stats: { speed: 88, accel: 94, handling: 98 },
     description: 'Perimeter frame engineering with razor-sharp steering agility, ideal for dodging traffic barricades and grabbing tight coins.',
@@ -41,7 +41,7 @@ export const BAJAJ_BIKES = [
     accentColor: '#00e5ff',
     topSpeed: 51,       // ~126 km/h base
     nitroTopSpeed: 71,  // ~170 km/h boosted
-    accel: 40,
+    accel: 12,
     handling: 82,       // Solid heavy cruising
     stats: { speed: 98, accel: 90, handling: 82 },
     description: 'Unmatched 400cc highway torque and high-speed stability, slicing through the long straights of Gongabu and Airport Runway.',

@@ -77,7 +77,7 @@ export default function App() {
   const [selectedBike, setSelectedBike] = useState(BAJAJ_BIKES[0]);
   const [gameState, setGameState] = useState('MENU');
   const [countdownSequence, setCountdownSequence] = useState('3');
-  const [score, setScore] = useState(3500);
+  const [score, setScore] = useState(0);
   const [coinsCollected, setCoinsCollected] = useState(0);
   const [speedKmh, setSpeedKmh] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -297,7 +297,11 @@ export default function App() {
           <MainMenu
             selectedBike={selectedBike}
             setSelectedBike={setSelectedBike}
-            onStartRace={() => setGameState('COUNTDOWN')}
+            onStartRace={() => {
+              setScore(0);
+              setCoinsCollected(0);
+              setGameState('COUNTDOWN');
+            }}
           />
         )}
 

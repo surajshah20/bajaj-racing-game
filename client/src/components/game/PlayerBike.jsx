@@ -183,12 +183,30 @@ export default function PlayerBike({
     const isNitro = nitroBoostTime.current > 0;
     if (setIsNitroState) setIsNitroState(isNitro);
 
-    const baseTopSpeed = selectedBike.topSpeed || 50;
-    const maxSpeed = isNitro ? (selectedBike.nitroTopSpeed || 76) : baseTopSpeed;
-    const baseAccel = isNitro ? 78 : (selectedBike.accel || 42);
+    const baseTopSpeed = selectedBike.topSpeed || 48;
+    const maxSpeed = isNitro ? (selectedBike.nitroTopSpeed || 70) : baseTopSpeed;
+    // baseAccel from config is now ~11-13; use it as the peak torque scalar
+    const baseAccel = isNitro ? 32 : (selectedBike.accel || 11);
 
     const currentSpeed = velocity.current;
     const speedRatio = Math.min(1.0, currentSpeed / maxSpeed);
+
+    // ── REALISTIC 6-GEAR AUTOMATIC TRANSMISSION ──────────────────────
+    // Speed thresholds (fraction of maxSpeed) where each gear tops out
+    const GEAR_TOPS = [0, 0.14, 0.28, 0.46, 0.65, 0.82, 1.0];
+    // Torque multipliers per gear (peak at mid gears, falls off at top)
+    const GEAR_TORQUE = [0, 2.8, 2.4, 1.8, 1.3, 0.90, 0.60];
+    let gear = 1;
+    for (let g = 1; g <= 6; g++) {
+      if (speedRatio <= GEAR_TOPS[g]) { gear = g; break; }
+    }
+    // Torque falls as speed approaches gear ceiling → natural power band
+    const gearProgress = speedRatio < GEAR_TOPS[gear]
+      ? (speedRatio - GEAR_TOPS[gear - 1]) / (GEAR_TOPS[gear] - GEAR_TOPS[gear - 1])
+      : 1.0;
+    const torqueMultiplier = GEAR_TORQUE[gear] * Math.max(0.25, 1.0 - gearProgress * 0.6);
+    // Launch traction limit: cap launch snap in gear 1
+    const tractionLimit = gear === 1 ? Math.min(1.0, currentSpeed / (maxSpeed * 0.08) + 0.35) : 1.0;
 
     // Track statistics for podium recap
     if (stuntStatsRef?.current) {
@@ -209,15 +227,18 @@ export default function PlayerBike({
     } else {
       // THROTTLE & BRAKE DRIVING
       if (inputState.gas) {
-        const torque = baseAccel * Math.max(0.3, 1.0 - Math.pow(speedRatio, 1.4) * 0.75);
+        const torque = baseAccel * torqueMultiplier * tractionLimit;
         velocity.current = Math.min(maxSpeed, currentSpeed + torque * delta);
       } else if (inputState.brake) {
-        velocity.current = Math.max(0, currentSpeed - 58 * delta);
+        // Progressive braking: harder at speed
+        const brakePower = 28 + currentSpeed * 0.6;
+        velocity.current = Math.max(0, currentSpeed - brakePower * delta);
         if (currentSpeed > 15) {
           engineAudio.playSkidScreech();
         }
       } else {
-        const rollingDrag = 7.5 + currentSpeed * 0.06;
+        // Smooth rolling deceleration (engine drag + air resistance)
+        const rollingDrag = 3.5 + currentSpeed * 0.08;
         velocity.current = Math.max(0, currentSpeed - rollingDrag * delta);
       }
     }
@@ -240,40 +261,69 @@ export default function PlayerBike({
     // Points strictly to the RIGHT of travel!
     const rightVector = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
 
-    // 3. PRODUCTION-GRADE ARCADE STEERING (ZERO AUTO-STEERING, INSTANT DIRECT CONTROL)
+    // 3. PRODUCTION-GRADE ARCADE STEERING — IMPULSE SYSTEM (zero auto-turn on curves)
+    // Pressing left/right adds impulse to lateral velocity.
+    // Releasing causes friction-only decay — NO spring back to center, NO auto-steer.
     let steerInput = 0;
-    if (inputState.left) steerInput -= 1.0;  // negative -> left side of road
-    if (inputState.right) steerInput += 1.0; // positive -> right side of road
+    if (inputState.left) steerInput -= 1.0;   // negative → left side of road
+    if (inputState.right) steerInput += 1.0;  // positive → right side of road
 
     const agility = (selectedBike.handling || 88) / 88;
-    // Speed-dependent lateral responsiveness: snappy at low/mid speeds, stable at top speed
-    const maxLateralSpeed = 16.5 * agility;
-    const targetLateralVel = steerInput * maxLateralSpeed;
+    // Speed-dependent lateral responsiveness: snappy at low, stable at top
+    const maxLateralSpeed = 13.0 * agility;
 
-    // Critically-damped response: instant snappy steering without oscillation
-    const steerResponsiveness = 18.0;
-    lateralVelocity.current = THREE.MathUtils.lerp(
-      lateralVelocity.current,
-      targetLateralVel,
-      Math.min(1.0, delta * steerResponsiveness)
-    );
+    if (steerInput !== 0) {
+      // ACTIVE STEERING: accelerate toward target lateral speed
+      const targetLateralVel = steerInput * maxLateralSpeed;
+      const steerAccel = 22.0 * agility;
+      lateralVelocity.current = THREE.MathUtils.lerp(
+        lateralVelocity.current,
+        targetLateralVel,
+        Math.min(1.0, delta * steerAccel)
+      );
+    } else {
+      // NO INPUT: friction-only slowdown — bike holds its lane, no spring-back
+      const frictionDecel = 9.0 + currentSpeed * 0.08;
+      const sign = Math.sign(lateralVelocity.current);
+      lateralVelocity.current = sign * Math.max(0, Math.abs(lateralVelocity.current) - frictionDecel * delta);
+    }
 
     lateralOffset.current += lateralVelocity.current * delta;
 
-    // Hard clamp to 8-lane highway surface (road width is ±10m, safe lane clamp is ±7.8m)
-    if (lateralOffset.current < -7.8) {
-      lateralOffset.current = -7.8;
-      if (lateralVelocity.current < 0) lateralVelocity.current = 0;
-    } else if (lateralOffset.current > 7.8) {
-      lateralOffset.current = 7.8;
-      if (lateralVelocity.current > 0) lateralVelocity.current = 0;
+    // ── ROAD EDGE COLLISION (wall hit physics) ────────────────────────
+    const ROAD_HALF_WIDTH = 7.5;   // safe carriageway ±7.5m
+    const KERB_HALF_WIDTH = 8.2;   // hard kerb/barrier at ±8.2m
+    if (Math.abs(lateralOffset.current) > ROAD_HALF_WIDTH) {
+      const hitSide = Math.sign(lateralOffset.current);
+      const penetration = Math.abs(lateralOffset.current) - ROAD_HALF_WIDTH;
+
+      if (Math.abs(lateralOffset.current) >= KERB_HALF_WIDTH) {
+        // Hard kerb barrier — bounce back, speed penalty, wobble
+        lateralOffset.current = hitSide * (KERB_HALF_WIDTH - 0.05);
+        const impactSpeed = Math.abs(lateralVelocity.current);
+        if (impactSpeed > 1.5 && !isCrashing.current) {
+          velocity.current = Math.max(0, velocity.current * (0.55 - impactSpeed * 0.015));
+          crashWobble.current = Math.min(0.55, 0.20 + impactSpeed * 0.04);
+          engineAudio.playCrash();
+          triggerFlash();
+          if (navigator.vibrate) navigator.vibrate([120]);
+        }
+        lateralVelocity.current = -hitSide * Math.abs(lateralVelocity.current) * 0.30;
+      } else {
+        // Rumble strip — slow down gradually, push back
+        velocity.current = Math.max(0, velocity.current - penetration * 18 * delta);
+        crashWobble.current = Math.max(crashWobble.current, penetration * 0.08);
+        // Gentle push back toward road
+        lateralOffset.current -= hitSide * penetration * 0.4;
+        lateralVelocity.current *= 0.85;
+      }
     }
 
     // 4. MOTORCYCLE ROLL (LEAN)
     // When turning LEFT (lateralVelocity < 0), lean must be POSITIVE (rolls bike left)
     // When turning RIGHT (lateralVelocity > 0), lean must be NEGATIVE (rolls bike right)
     const maxLean = 0.48; // ~28 degrees roll
-    const targetLean = -(lateralVelocity.current / maxLateralSpeed) * maxLean;
+    const targetLean = -(lateralVelocity.current / (13.0 * agility)) * maxLean;
     currentLean.current = THREE.MathUtils.lerp(currentLean.current, targetLean, Math.min(1.0, delta * 12.0));
 
     // 5. WHEELIE MECHANIC (Space / Shift / Wheelie button)
