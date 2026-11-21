@@ -684,8 +684,8 @@ export default function PlayerBike({
       <Rider
         bikeStateRef={bikeStateRef}
         accentColor={selectedBike.color}
-        scale={1.75}
-        position={[0, 1.10, 0.14]}
+        scale={1.38}
+        position={[0, 0.92, -0.02]}
         rotation={[0, Math.PI, 0]}
       />
 

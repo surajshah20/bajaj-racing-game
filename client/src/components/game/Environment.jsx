@@ -1410,9 +1410,9 @@ function CircuitHousesAndTown({ count = 55 }) {
           variant={h.variant}
         />
       ))}
-      {/* Distinct Heritage Pagoda Temples along the ring road circuit */}
-      <NewariPagodaTemple position={[-250, 0, 390]} rotation={[0, 0.4, 0]} />
-      <NewariPagodaTemple position={[250, 4.0, -560]} rotation={[0, -0.6, 0]} />
+      {/* Distinct Heritage Pagoda Temples situated well beyond sidewalks & hedges (28m offset) */}
+      <NewariPagodaTemple position={[-271.5, -0.4, 361.6]} rotation={[0, -0.99, 0]} />
+      <NewariPagodaTemple position={[225.5, 3.9, -535.6]} rotation={[0, 0.84, 0]} />
     </group>
   );
 }
