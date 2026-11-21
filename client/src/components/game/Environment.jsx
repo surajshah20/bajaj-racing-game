@@ -93,22 +93,23 @@ function grain(ctx, w, h, amount) {
   ctx.putImageData(img, 0, 0);
 }
 
-// 8-Lane Kathmandu Ring Road Asphalt with yellow edge lines and dashed multi-lane markers
+// Road Asphalt with vibrant solid yellow center divider, side solid white lines, and subtle tire markings (Matching reference screenshot)
 const asphaltTexture = () =>
   canvasTexture('asphalt', 512, 512, (ctx, w, h) => {
-    ctx.fillStyle = '#2d2e32';
+    // Rich asphalt base
+    ctx.fillStyle = '#424549';
     ctx.fillRect(0, 0, w, h);
 
-    // Weathering patches & tire rubber marks
-    for (let i = 0; i < 300; i++) {
-      const dark = Math.random() < 0.6;
-      ctx.fillStyle = dark ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.03)';
+    // Weathering patches & texture variation
+    for (let i = 0; i < 220; i++) {
+      const dark = Math.random() < 0.55;
+      ctx.fillStyle = dark ? 'rgba(30, 32, 35, 0.12)' : 'rgba(255, 255, 255, 0.04)';
       ctx.beginPath();
       ctx.ellipse(
         Math.random() * w,
         Math.random() * h,
-        15 + Math.random() * 60,
-        10 + Math.random() * 40,
+        15 + Math.random() * 50,
+        10 + Math.random() * 35,
         Math.random() * Math.PI,
         0,
         Math.PI * 2
@@ -116,24 +117,38 @@ const asphaltTexture = () =>
       ctx.fill();
     }
 
-    // Outer Yellow Shoulders (Solid Lines)
-    ctx.fillStyle = '#f5c518';
-    ctx.fillRect(w * 0.04, 0, w * 0.018, h);
-    ctx.fillRect(w * 0.942, 0, w * 0.018, h);
+    // Outer Edge White Lines (Solid Road Boundaries)
+    ctx.fillStyle = '#f0f0eb';
+    ctx.fillRect(w * 0.035, 0, w * 0.016, h);
+    ctx.fillRect(w * 0.949, 0, w * 0.016, h);
 
-    // 4 Dashed White Driving Lane Dividers across the highway
-    ctx.fillStyle = 'rgba(240, 240, 235, 0.95)';
-    const laneLines = [0.22, 0.40, 0.60, 0.78];
-    laneLines.forEach((xPos) => {
-      ctx.fillRect(w * xPos, 0, w * 0.014, h * 0.45);
-    });
+    // BOLD Center Yellow Divider Line (Solid Double-Stroke Highway Look matching reference image)
+    ctx.fillStyle = '#ffbb00';
+    ctx.fillRect(w * 0.490, 0, w * 0.020, h);
 
-    // Fine aggregate stones
-    for (let i = 0; i < 3000; i++) {
-      ctx.fillStyle = `rgba(180,180,180,${0.1 + Math.random() * 0.25})`;
+    // Fine aggregate pavement grit
+    for (let i = 0; i < 2500; i++) {
+      ctx.fillStyle = `rgba(200,200,200,${0.08 + Math.random() * 0.18})`;
       ctx.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5);
     }
-    grain(ctx, w, h, 0.35);
+    grain(ctx, w, h, 0.28);
+  });
+
+// Clean concrete sidewalk texture (matching reference curb & walkway)
+const sidewalkTexture = () =>
+  canvasTexture('sidewalk', 256, 256, (ctx, w, h) => {
+    ctx.fillStyle = '#cfd2d6';
+    ctx.fillRect(0, 0, w, h);
+    // Concrete tile expansion joints
+    ctx.fillStyle = '#9aa0a6';
+    ctx.fillRect(0, h * 0.49, w, 3);
+    ctx.fillRect(0, h * 0.98, w, 3);
+    for (let i = 0; i < 1500; i++) {
+      const v = Math.random() * 40 - 20;
+      ctx.fillStyle = `rgba(${180 + v},${185 + v},${190 + v},0.3)`;
+      ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+    }
+    grain(ctx, w, h, 0.2);
   });
 
 const grassTexture = () =>
@@ -731,11 +746,13 @@ function buildFlyoverPillars() {
 export function Track() {
   const geos = useMemo(
     () => ({
-      road: buildStrip(-10.0, 10.0, 0.02, 28, 1200),
-      kerbL: buildStrip(-11.4, -10.0, 0.01, 4, 1200),
-      kerbR: buildStrip(10.0, 11.4, 0.01, 4, 1200),
-      shoulderL: buildStrip(-15.5, -11.4, -0.02, 5, 1200),
-      shoulderR: buildStrip(11.4, 15.5, -0.02, 5, 1200),
+      road: buildStrip(-9.0, 9.0, 0.02, 28, 1200),
+      curbL: buildStrip(-9.6, -9.0, 0.12, 4, 1200),
+      curbR: buildStrip(9.0, 9.6, 0.12, 4, 1200),
+      sidewalkL: buildStrip(-13.0, -9.6, 0.10, 8, 1200),
+      sidewalkR: buildStrip(9.6, 13.0, 0.10, 8, 1200),
+      hedgeVergeL: buildStrip(-16.0, -13.0, 0.06, 6, 1200),
+      hedgeVergeR: buildStrip(13.0, 16.0, 0.06, 6, 1200),
     }),
     []
   );
@@ -748,6 +765,7 @@ export function Track() {
       grass: grassTexture(),
       gravel: gravelTexture(),
       kerb: kerbTexture(),
+      sidewalk: sidewalkTexture(),
     }),
     []
   );
@@ -768,28 +786,28 @@ export function Track() {
         </mesh>
       ))}
 
-      {/* Sidewalks / Gravel shoulders */}
-      {[geos.shoulderL, geos.shoulderR].map((g, i) => (
-        <mesh key={`sh${i}`} geometry={g} receiveShadow>
-          <meshStandardMaterial map={maps.gravel} roughness={1} side={THREE.DoubleSide} />
+      {/* Concrete Sidewalks flanking the roadway */}
+      {[geos.sidewalkL, geos.sidewalkR].map((g, i) => (
+        <mesh key={`sw${i}`} geometry={g} receiveShadow>
+          <meshStandardMaterial map={maps.sidewalk} roughness={0.8} side={THREE.DoubleSide} />
         </mesh>
       ))}
 
-      {/* Red & White Safety Kerbs */}
-      {[geos.kerbL, geos.kerbR].map((g, i) => (
-        <mesh key={`k${i}`} geometry={g} receiveShadow>
-          <meshStandardMaterial
-            map={maps.kerb}
-            roughness={0.7}
-            side={THREE.DoubleSide}
-            polygonOffset
-            polygonOffsetFactor={-2}
-            polygonOffsetUnits={-2}
-          />
+      {/* Raised Concrete Curbs separating road from sidewalk */}
+      {[geos.curbL, geos.curbR].map((g, i) => (
+        <mesh key={`cb${i}`} geometry={g} receiveShadow>
+          <meshStandardMaterial color="#b0b5ba" roughness={0.7} side={THREE.DoubleSide} />
         </mesh>
       ))}
 
-      {/* Main 8-Lane Asphalt Highway */}
+      {/* Green Hedge & Grass Verge strips behind sidewalk */}
+      {[geos.hedgeVergeL, geos.hedgeVergeR].map((g, i) => (
+        <mesh key={`hv${i}`} geometry={g} receiveShadow>
+          <meshStandardMaterial map={maps.grass} roughness={0.9} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+
+      {/* Main Asphalt Highway with solid yellow center divider */}
       <mesh geometry={geos.road} receiveShadow>
         <meshStandardMaterial
           map={maps.asphalt}
@@ -1027,114 +1045,374 @@ function RoadsideStreetlights({ count = 70 }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Roblox-Style City Skyscrapers & Neon Billboards                   */
+/*  Wooden Utility / Telegraph Poles with Drooping Cables (Matching Reference) */
 /* ------------------------------------------------------------------ */
 
-const NEON_COLORS = ['#00e5ff', '#ff007f', '#f7b500', '#00ff88', '#9d00ff'];
-
-function RobloxCityBuildings() {
-  const buildings = useMemo(() => {
+function RoadsideUtilityPoles({ count = 80 }) {
+  const poles = useMemo(() => {
     const list = [];
-    const rnd = mulberry32(101);
-    // Gongabu Boulevard to Maharajgunj urban sectors (t: 0.65 to 0.79)
-    // and Airport runway sector (t: 0.88 to 0.96)
-    const sectors = [
-      { start: 0.65, end: 0.79, count: 18 },
-      { start: 0.88, end: 0.96, count: 10 },
-    ];
-
-    sectors.forEach((sec) => {
-      for (let i = 0; i < sec.count; i++) {
-        const t = sec.start + (i / sec.count) * (sec.end - sec.start);
-        const p = trackCurve.getPointAt(t);
-        const tg = trackCurve.getTangentAt(t);
-        const norm = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
-        const side = i % 2 === 0 ? 1 : -1;
-        const dist = 24 + rnd() * 18;
-        const width = 16 + rnd() * 12;
-        const depth = 14 + rnd() * 10;
-        const height = 28 + rnd() * 45;
-        const neonColor = NEON_COLORS[Math.floor(rnd() * NEON_COLORS.length)];
-        const rotY = Math.atan2(tg.x, tg.z) + (rnd() - 0.5) * 0.2;
-
+    for (let i = 0; i < count; i++) {
+      const t = i / count;
+      const p = trackCurve.getPointAt(t);
+      const tg = trackCurve.getTangentAt(t);
+      const norm = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
+      const rotY = Math.atan2(tg.x, tg.z);
+      // Place poles along both outer sidewalks (~11.8m from road centerline)
+      [-11.8, 11.8].forEach((offset) => {
         list.push({
-          x: p.x + norm.x * dist * side,
-          y: p.y + height / 2 - 0.6,
-          z: p.z + norm.z * dist * side,
-          width,
-          depth,
-          height,
-          neonColor,
+          x: p.x + norm.x * offset,
+          y: p.y,
+          z: p.z + norm.z * offset,
           rotY,
-          hasBillboard: rnd() > 0.45,
-          billboardText: rnd() > 0.5 ? 'BAJAJ PULSAR' : 'HAPPY DASHAIN',
         });
-      }
-    });
-
+      });
+    }
     return list;
-  }, []);
+  }, [count]);
 
   return (
     <group>
-      {buildings.map((b, idx) => (
-        <group key={`bldg-${idx}`} position={[b.x, b.y, b.z]} rotation={[0, b.rotY, 0]}>
-          {/* Main Skyscraper Body */}
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[b.width, b.height, b.depth]} />
-            <meshStandardMaterial color="#1a202c" roughness={0.4} metalness={0.7} />
+      {poles.map((pole, idx) => (
+        <group key={`pole-${idx}`} position={[pole.x, pole.y, pole.z]} rotation={[0, pole.rotY, 0]}>
+          {/* Main Wooden Pole */}
+          <mesh position={[0, 4.2, 0]} castShadow>
+            <cylinderGeometry args={[0.15, 0.22, 8.4, 8]} />
+            <meshStandardMaterial color="#54412e" roughness={0.9} />
           </mesh>
-
-          {/* Glowing Roblox Neon Roof Trim */}
-          <mesh position={[0, b.height / 2 + 0.3, 0]}>
-            <boxGeometry args={[b.width + 0.6, 0.6, b.depth + 0.6]} />
-            <meshStandardMaterial
-              color={b.neonColor}
-              emissive={b.neonColor}
-              emissiveIntensity={2.5}
-              roughness={0.2}
-            />
+          {/* Horizontal Wooden Crossbar */}
+          <mesh position={[0, 7.8, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
+            <boxGeometry args={[0.18, 0.18, 2.4]} />
+            <meshStandardMaterial color="#423322" roughness={0.9} />
           </mesh>
-
-          {/* Rooftop Antenna / Spire with Red Warning Beacon */}
-          <mesh position={[0, b.height / 2 + 3.5, 0]}>
-            <cylinderGeometry args={[0.08, 0.25, 7.0, 6]} />
-            <meshStandardMaterial color="#718096" metalness={0.9} />
+          {/* Ceramic Insulators */}
+          {[-0.9, -0.3, 0.3, 0.9].map((iz) => (
+            <mesh key={iz} position={[0, 8.0, iz]}>
+              <cylinderGeometry args={[0.045, 0.055, 0.22, 6]} />
+              <meshStandardMaterial color="#e5ecf0" roughness={0.2} metalness={0.1} />
+            </mesh>
+          ))}
+          {/* Drooping Overhead Cable Span to next segment */}
+          <mesh position={[0, 7.7, 4.0]} rotation={[0.04, 0, 0]}>
+            <cylinderGeometry args={[0.012, 0.012, 8.2, 4]} />
+            <meshStandardMaterial color="#1a1c1e" roughness={0.5} />
           </mesh>
-          <mesh position={[0, b.height / 2 + 7.2, 0]}>
-            <sphereGeometry args={[0.35, 8, 8]} />
-            <meshStandardMaterial color="#ff0044" emissive="#ff0044" emissiveIntensity={5} />
-          </mesh>
-
-          {/* Luminous High-Tech Billboard */}
-          {b.hasBillboard && (
-            <group position={[0, b.height * 0.2, b.depth / 2 + 0.25]}>
-              <mesh>
-                <boxGeometry args={[b.width * 0.75, 5.5, 0.3]} />
-                <meshStandardMaterial color="#0b0f19" roughness={0.3} />
-              </mesh>
-              <Text
-                position={[0, 0.3, 0.2]}
-                fontSize={1.2}
-                color={b.neonColor}
-                anchorX="center"
-                anchorY="middle"
-              >
-                {b.billboardText}
-              </Text>
-              <Text
-                position={[0, -1.2, 0.2]}
-                fontSize={0.65}
-                color="#ffffff"
-                anchorX="center"
-                anchorY="middle"
-              >
-                DEFINITELY MALE • 2083
-              </Text>
-            </group>
-          )}
         </group>
       ))}
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dense Roadside Foliage: Autumn & Green Trees + Manicured Hedges   */
+/* ------------------------------------------------------------------ */
+
+// Reference image colors: vibrant golden autumn yellows + lush deep greens
+const FOLIAGE_COLORS = [
+  '#f5a700', // Bright Golden Autumn Yellow
+  '#e68900', // Rich Amber Orange
+  '#f0b823', // Sunny Birch Yellow
+  '#2d7a27', // Vibrant Deep Summer Green
+  '#3d9435', // Fresh Grass Green
+  '#235c1f', // Forest Green
+];
+
+function RoadsideTreesAndHedges({ count = 90 }) {
+  const items = useMemo(() => {
+    const rnd = mulberry32(314);
+    const list = [];
+    for (let i = 0; i < count; i++) {
+      const t = i / count;
+      const p = trackCurve.getPointAt(t);
+      const tg = trackCurve.getTangentAt(t);
+      const norm = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
+      const rotY = Math.atan2(tg.x, tg.z);
+
+      // Trees along left & right sides
+      [-1, 1].forEach((side) => {
+        const dist = 14.2 + rnd() * 2.5; // Just past the sidewalk
+        const isAutumn = (i % 2 === 0) || (rnd() > 0.45);
+        const color = isAutumn
+          ? FOLIAGE_COLORS[Math.floor(rnd() * 3)] // Autumn yellows/oranges
+          : FOLIAGE_COLORS[3 + Math.floor(rnd() * 3)]; // Greens
+        const scale = 1.0 + rnd() * 0.45;
+
+        list.push({
+          x: p.x + norm.x * dist * side,
+          y: p.y,
+          z: p.z + norm.z * dist * side,
+          rotY: rotY + (rnd() - 0.5) * 0.4,
+          color,
+          scale,
+          type: rnd() > 0.4 ? 'deciduous' : 'bushy',
+        });
+      });
+    }
+    return list;
+  }, [count]);
+
+  return (
+    <group>
+      {items.map((item, idx) => (
+        <group key={`tree-${idx}`} position={[item.x, item.y, item.z]} rotation={[0, item.rotY, 0]} scale={item.scale}>
+          {/* Tree Trunk */}
+          <mesh position={[0, 2.0, 0]} castShadow>
+            <cylinderGeometry args={[0.22, 0.35, 4.0, 8]} />
+            <meshStandardMaterial color="#4a3b2c" roughness={0.9} />
+          </mesh>
+          {/* Layered Foliage Canopy */}
+          <mesh position={[0, 4.5, 0]} castShadow receiveShadow>
+            <sphereGeometry args={[2.2, 12, 10]} />
+            <meshStandardMaterial color={item.color} roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 6.0, 0]} castShadow receiveShadow>
+            <sphereGeometry args={[1.7, 10, 8]} />
+            <meshStandardMaterial color={item.color} roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 7.2, 0]} castShadow receiveShadow>
+            <sphereGeometry args={[1.1, 8, 8]} />
+            <meshStandardMaterial color={item.color} roughness={0.8} />
+          </mesh>
+
+          {/* Manicured Roadside Hedge Bush next to tree */}
+          <mesh position={[0, 0.6, 2.4]} castShadow receiveShadow>
+            <boxGeometry args={[1.6, 1.2, 3.2]} />
+            <meshStandardMaterial color="#2d6e24" roughness={0.85} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Suburban & Nepali Residential Houses (Matching Reference Photo)   */
+/* ------------------------------------------------------------------ */
+
+// Siding and roof palettes directly from user reference screenshot
+const HOUSE_VARIANTS = [
+  { siding: '#f5ecd5', trim: '#ffffff', roof: '#cc4b18', style: 'cottage' }, // Cream siding, white trim, terracotta orange roof
+  { siding: '#bed2e8', trim: '#ffffff', roof: '#4a5460', style: 'slate' },   // Light slate blue, dark gray roof
+  { siding: '#e8dbb0', trim: '#ffffff', roof: '#c4481c', style: 'cottage' }, // Warm yellow siding, orange roof
+  { siding: '#c27453', trim: '#3a1f07', roof: '#7a2205', style: 'nepali' },  // Authentic Kathmandu terracotta brick
+  { siding: '#e6e1d5', trim: '#2d4b35', roof: '#52606d', style: 'slate' },   // Off-white siding, green shutter accents
+];
+
+function SuburbanHouse({ position, rotation, variant = 0 }) {
+  const v = HOUSE_VARIANTS[variant % HOUSE_VARIANTS.length];
+
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Front Yard Lawn Grass Base */}
+      <mesh position={[0, 0.05, 3.0]} receiveShadow>
+        <boxGeometry args={[13.5, 0.1, 10]} />
+        <meshStandardMaterial color="#427830" roughness={0.9} />
+      </mesh>
+      {/* Front Yard Picket / Stone Fence */}
+      <mesh position={[0, 0.45, 7.6]} castShadow>
+        <boxGeometry args={[13.5, 0.8, 0.2]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.5} />
+      </mesh>
+
+      {/* Main 2-Story House Body */}
+      <mesh position={[0, 3.5, 0]} castShadow receiveShadow>
+        <boxGeometry args={[10.5, 7.0, 8.5]} />
+        <meshStandardMaterial color={v.siding} roughness={0.7} />
+      </mesh>
+
+      {/* Corner White Vertical Trims */}
+      {[-5.25, 5.25].map((cx) =>
+        [-4.25, 4.25].map((cz) => (
+          <mesh key={`${cx}-${cz}`} position={[cx, 3.5, cz]}>
+            <boxGeometry args={[0.3, 7.05, 0.3]} />
+            <meshStandardMaterial color={v.trim} roughness={0.5} />
+          </mesh>
+        ))
+      )}
+
+      {/* Classic Pitched Gable Roof with Overhang */}
+      <group position={[0, 7.0, 0]}>
+        {/* Main Triangular Gable Roof Prism */}
+        <mesh position={[0, 2.2, 0]} rotation={[0, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.2, 6.6, 8.8, 3]} />
+          <meshStandardMaterial color={v.roof} roughness={0.65} />
+        </mesh>
+        {/* Overhanging Roof Eaves */}
+        <mesh position={[0, 0.15, 0]}>
+          <boxGeometry args={[11.5, 0.3, 9.4]} />
+          <meshStandardMaterial color="#2d2e33" roughness={0.6} />
+        </mesh>
+      </group>
+
+      {/* Front Door with Porch Entry Awning */}
+      <mesh position={[0, 1.4, 4.3]} castShadow>
+        <boxGeometry args={[1.5, 2.8, 0.12]} />
+        <meshStandardMaterial color="#2b3e50" roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 2.9, 4.7]} castShadow>
+        <boxGeometry args={[2.5, 0.2, 1.2]} />
+        <meshStandardMaterial color={v.roof} roughness={0.6} />
+      </mesh>
+
+      {/* Multi-Pane Glass Windows with White Trim */}
+      {[-3.2, 3.2].map((wx) => (
+        <group key={`w-lower-${wx}`} position={[wx, 1.8, 4.3]}>
+          <mesh>
+            <boxGeometry args={[1.8, 2.0, 0.12]} />
+            <meshStandardMaterial color="#1f3b5c" roughness={0.2} metalness={0.7} />
+          </mesh>
+          {/* White Window Mullions / Cross Frame */}
+          <mesh position={[0, 0, 0.08]}>
+            <boxGeometry args={[0.12, 1.9, 0.08]} />
+            <meshStandardMaterial color={v.trim} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 0, 0.08]}>
+            <boxGeometry args={[1.7, 0.12, 0.08]} />
+            <meshStandardMaterial color={v.trim} roughness={0.4} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Upper Floor Windows */}
+      {[-2.8, 0, 2.8].map((wx) => (
+        <group key={`w-upper-${wx}`} position={[wx, 5.0, 4.3]}>
+          <mesh>
+            <boxGeometry args={[1.6, 1.8, 0.12]} />
+            <meshStandardMaterial color="#1f3b5c" roughness={0.2} metalness={0.7} />
+          </mesh>
+          <mesh position={[0, 0, 0.08]}>
+            <boxGeometry args={[0.1, 1.7, 0.08]} />
+            <meshStandardMaterial color={v.trim} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 0, 0.08]}>
+            <boxGeometry args={[1.5, 0.1, 0.08]} />
+            <meshStandardMaterial color={v.trim} roughness={0.4} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Rooftop Brick Chimney */}
+      <mesh position={[3.2, 9.4, 1.2]} castShadow>
+        <boxGeometry args={[1.0, 2.2, 1.0]} />
+        <meshStandardMaterial color="#8a3d24" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Nepali Pagoda Temple Landmark (Durbar Square Style)               */
+/* ------------------------------------------------------------------ */
+
+function NewariPagodaTemple({ position, rotation }) {
+  return (
+    <group position={position} rotation={rotation} scale={1.2}>
+      {/* 3-Tiered Stone Plinth Steps */}
+      <mesh position={[0, 0.3, 0]} receiveShadow>
+        <boxGeometry args={[14, 0.6, 14]} />
+        <meshStandardMaterial color="#948e86" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.9, 0]} receiveShadow>
+        <boxGeometry args={[11, 0.6, 11]} />
+        <meshStandardMaterial color="#807a73" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 1.5, 0]} receiveShadow>
+        <boxGeometry args={[8.5, 0.6, 8.5]} />
+        <meshStandardMaterial color="#6b6660" roughness={0.9} />
+      </mesh>
+
+      {/* Ground Floor Red Brick Sanctum with Carved Wooden Doors */}
+      <mesh position={[0, 4.0, 0]} castShadow receiveShadow>
+        <boxGeometry args={[6.2, 4.4, 6.2]} />
+        <meshStandardMaterial color="#a84323" roughness={0.88} />
+      </mesh>
+
+      {/* Tier 1 Flaring Copper/Clay Roof */}
+      <mesh position={[0, 6.8, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+        <coneGeometry args={[6.8, 2.4, 4]} />
+        <meshStandardMaterial color="#7a2a12" roughness={0.7} />
+      </mesh>
+
+      {/* Tier 2 Mid-level Chamber */}
+      <mesh position={[0, 8.6, 0]} castShadow>
+        <boxGeometry args={[4.2, 2.4, 4.2]} />
+        <meshStandardMaterial color="#913b1f" roughness={0.85} />
+      </mesh>
+
+      {/* Tier 2 Mid Roof */}
+      <mesh position={[0, 10.3, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+        <coneGeometry args={[5.0, 1.9, 4]} />
+        <meshStandardMaterial color="#7a2a12" roughness={0.7} />
+      </mesh>
+
+      {/* Tier 3 Upper Pinnacle Chamber */}
+      <mesh position={[0, 11.6, 0]}>
+        <boxGeometry args={[2.5, 1.4, 2.5]} />
+        <meshStandardMaterial color="#913b1f" roughness={0.85} />
+      </mesh>
+
+      {/* Tier 3 Top Gold-Plated Roof */}
+      <mesh position={[0, 12.8, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+        <coneGeometry args={[3.2, 1.6, 4]} />
+        <meshStandardMaterial color="#d49419" metalness={0.85} roughness={0.25} />
+      </mesh>
+
+      {/* Gilded Gajur (Pinnacle Spire) */}
+      <mesh position={[0, 14.2, 0]}>
+        <coneGeometry args={[0.4, 1.6, 8]} />
+        <meshStandardMaterial color="#ffcc00" emissive="#ffaa00" emissiveIntensity={1.8} metalness={0.95} />
+      </mesh>
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dense Circuit Houses (Replacing Plain Generic Skyscrapers)        */
+/* ------------------------------------------------------------------ */
+
+function CircuitHousesAndTown({ count = 55 }) {
+  const houses = useMemo(() => {
+    const rnd = mulberry32(888);
+    const list = [];
+    for (let i = 0; i < count; i++) {
+      const t = i / count;
+      // Skip mega ramp jump flight corridors
+      if (isTooCloseToRamp(t)) continue;
+      const p = trackCurve.getPointAt(t);
+      const tg = trackCurve.getTangentAt(t);
+      const norm = new THREE.Vector3(-tg.z, 0, tg.x).normalize();
+      const rotY = Math.atan2(tg.x, tg.z);
+
+      // Flank both sides of the roadway with front-facing suburban & Nepali houses
+      [-1, 1].forEach((side) => {
+        const dist = 21.0 + rnd() * 8.0; // Sits neatly behind the sidewalk hedges
+        const variant = Math.floor(rnd() * HOUSE_VARIANTS.length);
+        const houseRotY = rotY + (side > 0 ? -Math.PI / 2 : Math.PI / 2) + (rnd() - 0.5) * 0.15;
+
+        list.push({
+          x: p.x + norm.x * dist * side,
+          y: p.y,
+          z: p.z + norm.z * dist * side,
+          rotY: houseRotY,
+          variant,
+        });
+      });
+    }
+    return list;
+  }, [count]);
+
+  return (
+    <group>
+      {houses.map((h, idx) => (
+        <SuburbanHouse
+          key={`sh-${idx}`}
+          position={[h.x, h.y, h.z]}
+          rotation={[0, h.rotY, 0]}
+          variant={h.variant}
+        />
+      ))}
+      {/* Distinct Heritage Pagoda Temples along the ring road circuit */}
+      <NewariPagodaTemple position={[-250, 0, 390]} rotation={[0, 0.4, 0]} />
+      <NewariPagodaTemple position={[250, 4.0, -560]} rotation={[0, -0.6, 0]} />
     </group>
   );
 }
@@ -1150,9 +1428,12 @@ export function EnvironmentDecorations() {
       <KalankiUnderpass />
       <SwayambhuStupa />
       <DashainKites />
-      <NepaliHouses />
-      <RoadsideStreetlights count={70} />
-      <RobloxCityBuildings />
+      
+      {/* Reference Image Street Racing Assets: Sidewalk utility poles, autumn & green trees, dense suburban & Newari houses */}
+      <RoadsideUtilityPoles count={85} />
+      <RoadsideTreesAndHedges count={95} />
+      <CircuitHousesAndTown count={60} />
+      <RoadsideStreetlights count={60} />
 
       {/* Overhead Pedestrian Bridges (आकाशे पुल) at key sectors */}
       <PedestrianBridge t={0.06} bannerText="शुभ विजया दशमी - KOTESHWOR" />
